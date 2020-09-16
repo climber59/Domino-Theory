@@ -41,6 +41,7 @@ function [] = Domino_Theory()
 	newGame();
 	
 	function [] = click(~,~)
+% 		[f.CurrentPoint]
 		if finished
 			return
 		end
@@ -130,8 +131,8 @@ function [] = Domino_Theory()
 			sideHintPanel(2*i-1) = uipanel('Parent',f,'Units','normalized','Position',[axp(1)-axp(3)*3/7,axp(4)/8*(2*i),axp(3)*3/7,axp(4)/8]);
 			sideHintPanel(2*i) = uipanel('Parent',f,'Units','normalized','Position',[axp(1)-axp(3)*3/7,axp(4)/8*(2*i-1),axp(3)*3/7,axp(4)/8]);
 			for j = 1:7
-				sideHintPanel(2*i-1).UserData.hints(j) = uicontrol('Parent',sideHintPanel(2*i-1),'Style','text','Units','normalized','Position',[(j-1)/7 0 1/7 1],'String',num2str(t(j)),'HorizontalAlignment','center');
-				sideHintPanel(2*i).UserData.hints(j) = uicontrol('Parent',sideHintPanel(2*i),'Style','text','Units','normalized','Position',[(j-1)/7 0 1/7 1],'String',num2str(b(j)),'HorizontalAlignment','center');
+				sideHintPanel(2*i-1).UserData.hints(j) = uicontrol('Parent',sideHintPanel(2*i-1),'Style','text','Units','normalized','Position',[(j-1)/7 0.25 1/7 0.5],'String',num2str(t(j)),'HorizontalAlignment','center');
+				sideHintPanel(2*i).UserData.hints(j) = uicontrol('Parent',sideHintPanel(2*i),'Style','text','Units','normalized','Position',[(j-1)/7 0.25 1/7 0.5],'String',num2str(b(j)),'HorizontalAlignment','center');
 				
 			end
 % 			text(0.9,2*i-0.5,num2str(t,' %i'),'FontUnits','normalized','FontSize',fs,'FontName','fixedwidth','HorizontalAlignment','right');
@@ -193,9 +194,9 @@ function [] = Domino_Theory()
 	
 	function [] = resize(~,~)
 % 		ax.Units = 'pixels';
-% 		disp(ax.TightInset)
-% 		disp(ax.PlotBoxAspectRatio)
-% 		disp(ax.Position)
+% 		disp(ax.TightInset) %[0 0 0]
+% 		disp(ax.PlotBoxAspectRatio) %[3.5 4 1]
+% 		disp(ax.Position) % [0.2986    0.0995    0.6968    0.7958] when normalized
 % 		ax.Units = 'normalized';
 	end
 	
@@ -365,11 +366,11 @@ function [] = Domino_Theory()
 		f.Name = 'Domino Theory';
 		f.NumberTitle = 'off';
 		f.WindowButtonDownFcn = @click;
+		f.Position(3) = 1.5*f.Position(4);
 		f.SizeChangedFcn = @resize;
 		f.UserData = 'normal';
 		f.Resize = 'on';
 		f.Units = 'pixels';
-		f.Position(3) = 1.5*f.Position(4);
 		
 		
 		
