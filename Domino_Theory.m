@@ -17,9 +17,9 @@ function [] = Domino_Theory()
 	noteMode = [];
 	selectorBox = [];
 	gValues = [];
-	topHints = gobjects(1,7);
-	botHints = gobjects(1,7);
-	sideHints = gobjects(8,1);
+	topHints = gobjects(7,4);
+	botHints = gobjects(7,4);
+	sideHints = gobjects(8,7);
 	
 	blobs = [];
 	checkmark = [];
@@ -90,7 +90,6 @@ function [] = Domino_Theory()
 	
 	function [] = hintNums()
 		fs = 0.035;
-		axp = ax.Position;
 		topNums = numGrid(1:2:7,:); % each col gives the upper hints, each row gives side hints
 		botNums = numGrid(2:2:8,:); % each col gives the lower hints, each row gives side hints
 		
@@ -101,7 +100,9 @@ function [] = Domino_Theory()
 			b = sort(botNums(:,i))';
 			for j = 1:4
 				topHints(i,j) = text(i - 0.33*(mod(j,2) - 2), 0.4 + 0.5*floor((j-1)/2),num2str(t(j)),'FontUnits','normalized','FontSize',fs,'FontName','fixedwidth','HorizontalAlignment','center','VerticalAlignment','bottom');
+				topHints(i,j).UserData.num = t(j);
 				botHints(i,j) = text(i - 0.33*(mod(j,2) - 2), 9.4 + 0.5*floor((j-1)/2),num2str(b(j)),'FontUnits','normalized','FontSize',fs,'FontName','fixedwidth','HorizontalAlignment','center','VerticalAlignment','bottom');
+				botHints(i,j).UserData.num = b(j);
 			end
 		end
 		
@@ -111,7 +112,9 @@ function [] = Domino_Theory()
 			b = sort(botNums(i,:));
 			for j = 1:7
 				sideHints(2*i-1,j) = text(j*2/7 - 9/7, 2*i - 0.25, num2str(t(j)),'FontUnits','normalized','FontSize',fs,'FontName','fixedwidth','HorizontalAlignment','center','VerticalAlignment','bottom');
+				sideHints(2*i-1,j).UserData.num = t(j);
 				sideHints(2*i,j) = text(j*2/7 - 9/7, 2*i + 0.45, num2str(b(j)),'FontUnits','normalized','FontSize',fs,'FontName','fixedwidth','HorizontalAlignment','center','VerticalAlignment','bottom');
+				sideHints(2*i,j).UserData.num = b(j);
 			end
 		end
 	end
@@ -256,11 +259,64 @@ function [] = Domino_Theory()
 				notesGrid(r,c).String = notesGrid(1,1).UserData.none;
 			end
 			userGrid(r,c) = num;
+			hintUpdate(r,c);
 			mistakeChecks(r,c);
 
 			% display the check mark if the puzzle is completed
 			finished = winCheck();
 			highlight(false);
+		end
+		
+		% updates all the hints after entering a number
+		function [] = hintUpdate(r,c)
+			% may want to know if there's mistake before this (ie too many
+			% 3s entered in a row)
+			
+			
+			if mod(r,2) % top hints
+				userNums = userGrid(1:2:7,c);
+				hints = zeros(1,4);
+				for i = 1:4
+					hints(i) = topHints(c,i).UserData.num;
+				end
+				for i = 1:4
+					if ~isnan(userNums(i))
+						hints(find(userNums(i)==hints,1)) = -1;
+					end
+				end
+				for i = 1:4
+					topHints(c,i).Color = [1 1 1]*0.675*(hints(i) < 0);
+				end
+			else % bot hints
+				userNums = userGrid(2:2:8,c);
+				hints = zeros(1,4);
+				for i = 1:4
+					hints(i) = botHints(c,i).UserData.num;
+				end
+				for i = 1:4
+					if ~isnan(userNums(i))
+						hints(find(userNums(i)==hints,1)) = -1;
+					end
+				end
+				for i = 1:4
+					botHints(c,i).Color = [1 1 1]*0.675*(hints(i) < 0);
+				end
+			end
+			
+			% side hints
+			userNums = userGrid(r,:);
+			hints = zeros(1,7);
+			for i = 1:7
+				hints(i) = sideHints(r,i).UserData.num;
+			end
+			for i = 1:7
+				if ~isnan(userNums(i))
+					hints(find(userNums(i)==hints,1)) = -1;
+				end
+			end
+			for i = 1:7
+				sideHints(r,i).Color = [1 1 1]*0.675*(hints(i) < 0);
+			end
 		end
 		
 		% Checks for mistakes
