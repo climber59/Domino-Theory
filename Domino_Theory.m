@@ -20,6 +20,8 @@ function [] = Domino_Theory()
 	topHints = gobjects(7,4);
 	botHints = gobjects(7,4);
 	sideHints = gobjects(8,7);
+	domHints = gobjects(28,1);
+	domHintsP = gobjects(28,1);
 	
 	blobs = [];
 	checkmark = [];
@@ -111,14 +113,60 @@ function [] = Domino_Theory()
 			t = sort(topNums(i,:));
 			b = sort(botNums(i,:));
 			for j = 1:7
-				sideHints(2*i-1,j) = text(j*2/7 - 9/7, 2*i - 0.25, num2str(t(j)),'FontUnits','normalized','FontSize',fs,'FontName','fixedwidth','HorizontalAlignment','center','VerticalAlignment','bottom');
+				sideHints(2*i-1,j) = text(j*2/7 - 9/7, 2*i - 0.40, num2str(t(j)),'FontUnits','normalized','FontSize',fs,'FontName','fixedwidth','HorizontalAlignment','center','VerticalAlignment','middle');
 				sideHints(2*i-1,j).UserData.num = t(j);
-				sideHints(2*i,j) = text(j*2/7 - 9/7, 2*i + 0.45, num2str(b(j)),'FontUnits','normalized','FontSize',fs,'FontName','fixedwidth','HorizontalAlignment','center','VerticalAlignment','bottom');
+				sideHints(2*i,j) = text(j*2/7 - 9/7, 2*i + 0.40, num2str(b(j)),'FontUnits','normalized','FontSize',fs,'FontName','fixedwidth','HorizontalAlignment','center','VerticalAlignment','middle');
 				sideHints(2*i,j).UserData.num = b(j);
 			end
 		end
+		
+		% domino hints		
+		ind = 1;
+		s = 16/9; % scaling factor
+		v = 0.9/s*([1 1; 2 1; 2 2; 1 2; 1 3; 2 3] - [1.5 3.5]); % vertices to draw the domino tiles
+		for i = 0:6 % top num of domino
+			[xi, yi] = dotCoords(i);
+			for j = i:6 % bot num
+				[xj, yj] = dotCoords(j); % ax.XLim is used here, but it would be better if ax.XLim was set based on these, not the other way around
+				domHintsP(ind) = patch('Faces',[1 2 3 4; 3 4 5 6],'Vertices',v + [ax.XLim(1) + (j + 0.5)/s, 9 + (0.4 - 2*i)/s],'FaceColor',[1 1 1],'LineJoin','round');
+				domHints(ind) = line(ax.XLim(1) + (j + 0.5 + [xi, xj])/s, 9 - (0.5 + 2*i + [0.9+yi, yj])/s,'MarkerSize',2,'LineStyle','none','Marker','o','MarkerFaceColor',[0 0 0],'MarkerEdgeColor',[0 0 0]);
+				ind = ind + 1;
+			end
+		end
+		
+		
+		% gives coordinates to draw domino dots
+		function [x, y] = dotCoords(n)
+			switch n
+				case 0
+					x = nan; % prevents it from creating an "empty" line object that can't be saved in an array
+					y = nan;
+				case 1
+					x = 2;
+					y = 2;
+				case 2
+					x = [1 3];
+					y = [3 1];
+				case 3
+					x = [1 2 3];
+					y = [3 2 1];
+				case 4
+					x = [1 1 3 3];
+					y = [1 3 1 3];
+				case 5
+					x = [1 1 2 3 3];
+					y = [1 3 2 1 3];
+				case 6
+					x = [1 1 1 3 3 3];
+					y = [1 2 3 1 2 3];
+			end
+			x = (x-2)/4; % center around (0,0)
+			y = (y-2)/4;
+		end
 	end
 	
+	
+	% generates the matrix representing the shuffled dominos
 	function [B] = dominoGen()
 		i = randperm(28)';
 		dominoes = [00 01 02 03 04 05 06 11 12 13 14 15 16 22 23 24 25 26 33 34 35 36 44 45 46 55 56 66]';
@@ -221,8 +269,12 @@ function [] = Domino_Theory()
 		c = numPanel.UserData(2);
 		
 		% Entering/removing notes
+		oldnum = userGrid(r,c); % needed for domino hints
 		if noteMode
 			userGrid(r,c) = nan; % remove any "big" numbers
+			if ~isnan(oldnum) % update hints if replacing a big num with notes
+				hintUpdate(r, c, oldnum);
+			end
 			textGrid(r,c).String = '';
 			if ~isnan(num)% change a specific number
 				if notesGrid(r,c).String{cellRow}(strInds(1)) == ' '
@@ -243,7 +295,6 @@ function [] = Domino_Theory()
 				numPanel.Visible = 'off';
 				highlight(false);
 			end
-			mistakeChecks(r,c);
 		else
 			% Enter 'big' number
 			textGrid(r,c).FontSize = gValues.noteHeight/8;
@@ -259,8 +310,7 @@ function [] = Domino_Theory()
 				notesGrid(r,c).String = notesGrid(1,1).UserData.none;
 			end
 			userGrid(r,c) = num;
-			hintUpdate(r,c);
-			mistakeChecks(r,c);
+			hintUpdate(r,c, oldnum);
 
 			% display the check mark if the puzzle is completed
 			finished = winCheck();
@@ -268,10 +318,13 @@ function [] = Domino_Theory()
 		end
 		
 		% updates all the hints after entering a number
-		function [] = hintUpdate(r,c)
+		function [] = hintUpdate(r,c, oldnum)
+			clc
+			
 			% may want to know if there's mistake before this (ie too many
 			% 3s entered in a row)
 			
+			mistake = false;
 			
 			if mod(r,2) % top hints
 				userNums = userGrid(1:2:7,c);
@@ -304,11 +357,23 @@ function [] = Domino_Theory()
 			end
 			
 			% side hints
+			%{
+			sum(hints<0) ~= sum(isnan(userNums)) will tell you if there is
+			a mistake.
+			
+			red the entire row?
+			-easy
+			
+			red the numbers in question?
+			- easy for a number that shouldn't appear
+			- trickier for too many of a number sum(hintsO == x) ==	sum(userNums == x)
+			%}
 			userNums = userGrid(r,:);
 			hints = zeros(1,7);
 			for i = 1:7
 				hints(i) = sideHints(r,i).UserData.num;
 			end
+			hintsO = hints;
 			for i = 1:7
 				if ~isnan(userNums(i))
 					hints(find(userNums(i)==hints,1)) = -1;
@@ -317,15 +382,80 @@ function [] = Domino_Theory()
 			for i = 1:7
 				sideHints(r,i).Color = [1 1 1]*0.675*(hints(i) < 0);
 			end
-		end
-		
-		% Checks for mistakes
-		function [] = mistakeChecks(row,col)
-% 			for i = 1:n %latin square mistakes
-% 				blackNum(row,i);
-% 				blackNum(i,col);
-% 			end
-% 			mathCheck(row,col); % check for math mistake
+			if sum(hints<0) ~= sum(~isnan(userNums)) % entered nums don't match hints
+				mistake = true;
+				userNums
+				hints
+				hintsO
+				for i = unique(userNums(~isnan(userNums))) % check through each entered number
+					[i sum(userNums==i)	sum(hintsO==i)]
+					if sum(userNums==i) > sum(hintsO==i) % a number appears too many times (including when it's not supposed to appear)
+						% turn side hints red
+						if ~isempty(hintsO==i)
+							sideHints(r,hintsO==i).Color(1) = 1;
+						end
+						% turn big number red
+						for j = 1:7
+							if userNums(j) == i
+								textGrid(r,j).Color(1) = 1;
+								fprintf('\n%d %d turned red by side',r,j);
+							end
+						end
+					end
+				end
+			elseif ~mistake
+				for j = 1:7
+					textGrid(r,j).Color(1) = 0;
+					fprintf('\n%d %d turned black by side',r,j);
+				end
+			end
+			
+			
+			
+			% domino hints
+			%{
+			if new num completes a domino, grey out the dom.
+			if old num was also a domino, turn on the old dom.
+			if removing a num from a completed domino, turn on the old dom
+			%}
+			inds = sort(sub2ind(size(userGrid),[r r+(mod(r,2)*2-1)],[c c]));
+			if diff(userGrid(inds)) < 0 % top > bottom on the domino, mistake
+				mistake = true;
+				textGrid(inds(1)).Color(1) = 1; % should also mark the domino in some way
+				textGrid(inds(2)).Color(1) = 1;
+				fprintf('\n%d %d turned red by dom',r,j);
+			else
+				if ~mistake % changes the color back as long as there wasn't an earlier mistake found
+					textGrid(inds(1)).Color(1) = 0;
+					textGrid(inds(2)).Color(1) = 0;
+					fprintf('\n%d %d turned black by dom',r,j);
+				end
+				if all(~isnan(userGrid(inds)))
+					ind = patchInd(userGrid(inds)); % grey out new domino
+					domHintsP(ind).FaceColor = [1 1 1]*0.5;
+% 					fprintf('\n%d %d turned red by dom',r,j);
+% 					domHints(ind).MarkerFaceColor = [1 0 0]*0.675;
+				end
+				if all(~isnan([oldnum, userGrid(r+(mod(r,2)*2-1), c)])) || isnan(userGrid(r,c))
+					ind = patchInd(oldnum, userGrid(r,c)); % turn on old domino
+					domHintsP(ind).FaceColor = [1 1 1];
+% 					fprintf('\n%d %d turned red by dom',r,j);
+% 					domHints(ind).MarkerFaceColor = [0 0 0];
+				end
+			end
+			
+
+			function [index] = patchInd(n1,n2)
+				if nargin < 2 % n1 is an array of the two
+					t = min(n1);
+					b = max(n1);
+				else
+					t = min([n1,n2]);
+					b = max([n1,n2]);
+				end
+				p = [1 1+cumsum(7:-1:2)];
+				index = p(t+1) + b - t;
+			end
 		end
 	end
 	
@@ -405,7 +535,8 @@ function [] = Domino_Theory()
 		
 		
 		ax = axes('Parent',f);
-		ax.Position = [0.3 0 0.7 1];
+% 		ax.Position = [0.3 0 0.7 1];
+		ax.Position = [0 0 1 1];
 		ax.YDir = 'reverse';
 		ax.YTick = [];
 		ax.XTick = [];
@@ -413,7 +544,7 @@ function [] = Domino_Theory()
 		ax.YColor = f.Color;
 		ax.Color = f.Color;
 		axis equal
-		ax.XLim = [-9/7 8];
+		ax.XLim = [-37/7 8];
 		ax.YLim = [0 10];
 		
 		
