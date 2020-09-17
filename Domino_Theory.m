@@ -22,6 +22,7 @@ function [] = Domino_Theory()
 	sideHints = gobjects(8,7);
 	domHints = gobjects(28,1);
 	domHintsP = gobjects(28,1);
+	mistakes = zeros(8,7);
 	
 	blobs = [];
 	checkmark = [];
@@ -78,7 +79,7 @@ function [] = Domino_Theory()
 		
 		finished = false;
 		noteMode = false;
-		
+		mistakes = zeros(8,7);
 		userGrid = nan(8,7);
 		patchGrid();
 		numGrid = dominoGen();
@@ -274,6 +275,7 @@ function [] = Domino_Theory()
 			userGrid(r,c) = nan; % remove any "big" numbers
 			if ~isnan(oldnum) % update hints if replacing a big num with notes
 				hintUpdate(r, c, oldnum);
+				errorCheck(r,c, oldnum);
 			end
 			textGrid(r,c).String = '';
 			if ~isnan(num)% change a specific number
@@ -311,6 +313,7 @@ function [] = Domino_Theory()
 			end
 			userGrid(r,c) = num;
 			hintUpdate(r,c, oldnum);
+			errorCheck(r,c, oldnum);
 
 			% display the check mark if the puzzle is completed
 			finished = winCheck();
@@ -319,13 +322,6 @@ function [] = Domino_Theory()
 		
 		% updates all the hints after entering a number
 		function [] = hintUpdate(r,c, oldnum)
-			clc
-			
-			% may want to know if there's mistake before this (ie too many
-			% 3s entered in a row)
-			
-			mistake = false;
-			
 			if mod(r,2) % top hints
 				userNums = userGrid(1:2:7,c);
 				hints = zeros(1,4);
@@ -357,23 +353,11 @@ function [] = Domino_Theory()
 			end
 			
 			% side hints
-			%{
-			sum(hints<0) ~= sum(isnan(userNums)) will tell you if there is
-			a mistake.
-			
-			red the entire row?
-			-easy
-			
-			red the numbers in question?
-			- easy for a number that shouldn't appear
-			- trickier for too many of a number sum(hintsO == x) ==	sum(userNums == x)
-			%}
 			userNums = userGrid(r,:);
 			hints = zeros(1,7);
 			for i = 1:7
 				hints(i) = sideHints(r,i).UserData.num;
 			end
-			hintsO = hints;
 			for i = 1:7
 				if ~isnan(userNums(i))
 					hints(find(userNums(i)==hints,1)) = -1;
@@ -381,33 +365,6 @@ function [] = Domino_Theory()
 			end
 			for i = 1:7
 				sideHints(r,i).Color = [1 1 1]*0.675*(hints(i) < 0);
-			end
-			if sum(hints<0) ~= sum(~isnan(userNums)) % entered nums don't match hints
-				mistake = true;
-				userNums
-				hints
-				hintsO
-				for i = unique(userNums(~isnan(userNums))) % check through each entered number
-					[i sum(userNums==i)	sum(hintsO==i)]
-					if sum(userNums==i) > sum(hintsO==i) % a number appears too many times (including when it's not supposed to appear)
-						% turn side hints red
-						if ~isempty(hintsO==i)
-							sideHints(r,hintsO==i).Color(1) = 1;
-						end
-						% turn big number red
-						for j = 1:7
-							if userNums(j) == i
-								textGrid(r,j).Color(1) = 1;
-								fprintf('\n%d %d turned red by side',r,j);
-							end
-						end
-					end
-				end
-			elseif ~mistake
-				for j = 1:7
-					textGrid(r,j).Color(1) = 0;
-					fprintf('\n%d %d turned black by side',r,j);
-				end
 			end
 			
 			
@@ -419,44 +376,233 @@ function [] = Domino_Theory()
 			if removing a num from a completed domino, turn on the old dom
 			%}
 			inds = sort(sub2ind(size(userGrid),[r r+(mod(r,2)*2-1)],[c c]));
-			if diff(userGrid(inds)) < 0 % top > bottom on the domino, mistake
-				mistake = true;
-				textGrid(inds(1)).Color(1) = 1; % should also mark the domino in some way
-				textGrid(inds(2)).Color(1) = 1;
-				fprintf('\n%d %d turned red by dom',r,j);
-			else
-				if ~mistake % changes the color back as long as there wasn't an earlier mistake found
-					textGrid(inds(1)).Color(1) = 0;
-					textGrid(inds(2)).Color(1) = 0;
-					fprintf('\n%d %d turned black by dom',r,j);
-				end
-				if all(~isnan(userGrid(inds)))
-					ind = patchInd(userGrid(inds)); % grey out new domino
-					domHintsP(ind).FaceColor = [1 1 1]*0.5;
-% 					fprintf('\n%d %d turned red by dom',r,j);
-% 					domHints(ind).MarkerFaceColor = [1 0 0]*0.675;
-				end
-				if all(~isnan([oldnum, userGrid(r+(mod(r,2)*2-1), c)])) || isnan(userGrid(r,c))
-					ind = patchInd(oldnum, userGrid(r,c)); % turn on old domino
-					domHintsP(ind).FaceColor = [1 1 1];
-% 					fprintf('\n%d %d turned red by dom',r,j);
-% 					domHints(ind).MarkerFaceColor = [0 0 0];
-				end
+			if all(~isnan(userGrid(inds)))
+				ind = patchInd(userGrid(inds)); % grey out new domino
+				domHintsP(ind).FaceColor = [1 1 1]*0.5;
+			end
+			if all(~isnan([oldnum, userGrid(r+(mod(r,2)*2-1), c)])) || isnan(userGrid(r,c)) % oldnum was a domino, got replaced or removed
+				ind = patchInd(oldnum, userGrid(r+(mod(r,2)*2-1),c)); % turn on old domino
+				domHintsP(ind).FaceColor = [1 1 1];
+				% if a domino appears twice (user error), this will turn on
+				% the domino when it's removed even though it should be
+				% greyed out because of a different user domino. This might
+				% need to turn into checking the whole board to prevent
+				% this glitch
 			end
 			
 
-			function [index] = patchInd(n1,n2)
-				if nargin < 2 % n1 is an array of the two
-					t = min(n1);
-					b = max(n1);
-				else
-					t = min([n1,n2]);
-					b = max([n1,n2]);
+			
+		end
+		
+		
+		
+		
+	end
+	
+	% returns the domHints index of domino (n1,n2) 
+	function [index] = patchInd(n1,n2)
+		if nargin < 2 % n1 is an array of the two
+			t = min(n1);
+			b = max(n1);
+		else
+			t = min([n1,n2]);
+			b = max([n1,n2]);
+		end
+		p = [1 1+cumsum(7:-1:2)];
+		index = p(t+1) + b - t;
+	end
+	
+	function [] = errorCheck()%r, c, oldnum)
+		for r = 1:8
+			
+		end
+		for c = 1:7
+			
+		end
+		% top mistakes
+		if mod(r,2)
+			userNums = userGrid(1:2:7,c)';
+			hints = zeros(1,4);
+			for i = 1:4
+				hints(i) = topHints(c,i).UserData.num;
+			end
+			hintsO = hints;
+			for i = 1:4
+				if ~isnan(userNums(i))
+					hints(find(userNums(i)==hints,1)) = -1;
 				end
-				p = [1 1+cumsum(7:-1:2)];
-				index = p(t+1) + b - t;
+			end				
+			if sum(hints<0) ~= sum(~isnan(userNums)) % entered nums don't match hints
+				for i = unique(userNums(~isnan(userNums))) % check through each entered number
+					if sum(userNums==i) > sum(hintsO==i) % a number appears too many times (including when it's not supposed to appear)
+						mistakes(2*find(userNums==i)-1,c) = true;
+						if any(hintsO==i) % prevents trying to turn '5' red when there aren't any 5s in the row
+							topHints(c,hintsO==i).Color = [1 0 0]; % turn side hints red
+						else
+							% do something else to indicate why this is an
+							% error. this text is just to make a warning
+							'top error'
+						end
+					end
+				end
+			end
+
+		else % bot mistakes
+			userNums = userGrid(2:2:8,c)';
+			hints = zeros(1,4);
+			for i = 1:4
+				hints(i) = botHints(c,i).UserData.num;
+			end
+			hintsO = hints;
+			for i = 1:4
+				if ~isnan(userNums(i))
+					hints(find(userNums(i)==hints,1)) = -1;
+				end
+			end
+			if sum(hints<0) ~= sum(~isnan(userNums)) % entered nums don't match hints
+				for i = unique(userNums(~isnan(userNums))) % check through each entered number
+					if sum(userNums==i) > sum(hintsO==i) % a number appears too many times (including when it's not supposed to appear)
+						mistakes(2*find(userNums==i)-1,c) = true;
+						if any(hintsO==i) % prevents trying to turn '5' red when there aren't any 5s in the row
+							botHints(c,hintsO==i).Color = [1 0 0]; % turn side hints red
+						else
+							% do something else to indicate why this is an
+							% error. this text is just to make a warning
+							'bot error'
+						end
+					end
+				end
 			end
 		end
+
+		% side mistakes
+		userNums = userGrid(r,:);
+		hints = zeros(1,7);
+		for i = 1:7
+			hints(i) = sideHints(r,i).UserData.num;
+		end
+		hintsO = hints;
+		for i = 1:7
+			if ~isnan(userNums(i))
+				hints(find(userNums(i)==hints,1)) = -1;
+			end
+		end
+% 			userNums
+% 			hints
+% 			hintsO
+		if sum(hints<0) ~= sum(~isnan(userNums)) % entered nums don't match hints
+			for i = unique(userNums(~isnan(userNums))) % check through each entered number
+				if sum(userNums==i) > sum(hintsO==i) % a number appears too many times (including when it's not supposed to appear)
+					mistakes(r,userNums==i) = true;
+% 						userNum
+					if any(hintsO==i) % prevents trying to turn '5' red when there aren't any 5s in the row
+						sideHints(r,hintsO==i).Color = [1 0 0]; % turn side hints red
+					else
+						% do something else to indicate why this is an
+						% error. this text is just to make a warning
+						'side error'
+					end
+				end
+			end
+		end
+
+		% domino mistakes
+
+
+
+		mistakes
+		for i = 1:8
+			for j = 1:7
+				textGrid(i,j).Color(1) = mistakes(i,j);
+			end
+		end
+		%{
+		side hints should play out very similarly to top/bot hints,
+		just transposed
+
+		i could simplify my life by only turning the hints red, not the
+		big numbers. this way, none of them interfere with each other.
+
+		if i want to change the color of the big numbers, i think i'm
+		going to end up with an 8x7 array keeping track of which spaces
+		have an error and then do all color changes at the end.
+		- tried the big array to keep track, but i think there's just
+		so many ways for errors to occur. to know when to remove an
+		error warning, i'll need to check every row and column every
+		time a big number changes. I can't safely check just the
+		current r,c
+
+		im also running into the issue that I think the domino hints
+		may be too linked between error checking and hint updating to
+		be done separately. frankly most of them are linked and there's
+		more repeated code than i'd prefer
+
+
+
+
+
+		% side hint checking
+		%{
+		sum(hints<0) ~= sum(isnan(userNums)) will tell you if there is
+		a mistake.
+
+		red the entire row?
+		-easy
+
+		red the numbers in question?
+		- easy for a number that shouldn't appear
+		- trickier for too many of a number sum(hintsO == x) ==	sum(userNums == x)
+		%}
+		userNums = userGrid(r,:);
+		hints = zeros(1,7);
+		for i = 1:7
+			hints(i) = sideHints(r,i).UserData.num;
+		end
+		hintsO = hints;
+		for i = 1:7
+			if ~isnan(userNums(i))
+				hints(find(userNums(i)==hints,1)) = -1;
+			end
+		end
+		for i = 1:7
+			sideHints(r,i).Color = [1 1 1]*0.675*(hints(i) < 0);
+		end
+		if sum(hints<0) ~= sum(~isnan(userNums)) % entered nums don't match hints
+			mistake = true;
+			userNums
+			hints
+			hintsO
+
+			for i = unique(userNums(~isnan(userNums))) % check through each entered number
+				[i sum(userNums==i)	sum(hintsO==i)]
+				if sum(userNums==i) > sum(hintsO==i) % a number appears too many times (including when it's not supposed to appear)
+					% turn side hints red
+					if ~isempty(hintsO==i)
+						sideHints(r,hintsO==i).Color(1) = 1;
+					end
+					% turn big number red
+					for j = 1:7
+						if userNums(j) == i
+							textGrid(r,j).Color(1) = 1;
+							fprintf('\n%d %d turned red by side',r,j);
+						end
+					end
+				end
+			end
+		end
+
+
+% 			doms
+		inds = sort(sub2ind(size(userGrid),[r r+(mod(r,2)*2-1)],[c c]));
+		if diff(userGrid(inds)) < 0 % top > bottom on the domino, mistake
+			mistake = true;
+			textGrid(inds(1)).Color(1) = 1; % should also mark the domino in some way
+			textGrid(inds(2)).Color(1) = 1;
+			fprintf('\n%d %d turned red by dom',r,j);
+
+
+
+		%}
 	end
 	
 	function [won] = winCheck()
