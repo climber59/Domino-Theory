@@ -1,36 +1,34 @@
+%{
+
+
+scroll wheel to change size of enter tool?
+%}
 function [] = Domino_Theory()
 	f = [];
 	ax = [];
 	numGrid = [];
-	blobs = [];
-	indGrid = [];
-	n = [];
+	
 	numPanel = [];
 	textGrid = [];
-	userGrid = [];
 	notesGrid = [];
-	blobSize = [];
-	gridSize = [];
+	userGrid = [];
 	finished = [];
 	but = [];
-	allowedOps = [];
-	numPicker = [];
-	addCheck = [];
-	arrayOptions = [];
-	arrayCustom = [];
-	theNums = [];
-	checkmark = [];
 	noteMode = [];
 	selectorBox = [];
-	numBoxes = [];
-	tableSlider = [];
-	toolColumnsSlider = [];
 	gValues = [];
+	topHints = gobjects(7,4);
+	botHints = gobjects(7,4);
+	sideHints = gobjects(8,7);
+	
+	blobs = [];
+	checkmark = [];
 	
 	figureSetup();
 	newGame();
 	
 	function [] = click(~,~)
+% 		[f.CurrentPoint]
 		if finished
 			return
 		end
@@ -88,34 +86,37 @@ function [] = Domino_Theory()
 		blankNums();
 		buildEnterTool();
 		checkmark = patch(1.5 + 6*[0 9 37 87 100 42]/100, 1.9 + 6*[72 59 78 3 12 100]/100,[0 1 0],'FaceAlpha',0.5,'EdgeColor','none','Visible','off');
-% 		showNums(); % For debugging purposes only
 	end
 	
 	function [] = hintNums()
-		% most of the randomization should be turned to sorting
 		fs = 0.035;
 		topNums = numGrid(1:2:7,:); % each col gives the upper hints, each row gives side hints
 		botNums = numGrid(2:2:8,:); % each col gives the lower hints, each row gives side hints
+		
 		
 		% top and bot hints
 		for i = 1:7
 			t = sort(topNums(:,i))';
 			b = sort(botNums(:,i))';
-% 			num2str(t(1:2),' %i')
-			topHint = text(i + 0.5,0.9375,{num2str(t(1:2),' %i'),num2str(t(3:4),' %i')},'FontUnits','normalized','FontSize',fs,'FontName','fixedwidth','HorizontalAlignment','center','VerticalAlignment','bottom');
-			botHint = text(i + 0.5,9.0625,{num2str(b(1:2),' %i'),num2str(b(3:4),' %i')},'FontUnits','normalized','FontSize',fs,'FontName','fixedwidth','HorizontalAlignment','center','VerticalAlignment','top');
+			for j = 1:4
+				topHints(i,j) = text(i - 0.33*(mod(j,2) - 2), 0.4 + 0.5*floor((j-1)/2),num2str(t(j)),'FontUnits','normalized','FontSize',fs,'FontName','fixedwidth','HorizontalAlignment','center','VerticalAlignment','bottom');
+				topHints(i,j).UserData.num = t(j);
+				botHints(i,j) = text(i - 0.33*(mod(j,2) - 2), 9.4 + 0.5*floor((j-1)/2),num2str(b(j)),'FontUnits','normalized','FontSize',fs,'FontName','fixedwidth','HorizontalAlignment','center','VerticalAlignment','bottom');
+				botHints(i,j).UserData.num = b(j);
+			end
 		end
 		
 		%side hints
 		for i = 1:4
 			t = sort(topNums(i,:));
-			text(0.9,2*i-0.5,num2str(t,' %i'),'FontUnits','normalized','FontSize',fs,'FontName','fixedwidth','HorizontalAlignment','right');
-			
 			b = sort(botNums(i,:));
-			sideHint = text(0.9,2*i+0.5,num2str(b,' %i'),'FontUnits','normalized','FontSize',fs,'FontName','fixedwidth','HorizontalAlignment','right');
+			for j = 1:7
+				sideHints(2*i-1,j) = text(j*2/7 - 9/7, 2*i - 0.25, num2str(t(j)),'FontUnits','normalized','FontSize',fs,'FontName','fixedwidth','HorizontalAlignment','center','VerticalAlignment','bottom');
+				sideHints(2*i-1,j).UserData.num = t(j);
+				sideHints(2*i,j) = text(j*2/7 - 9/7, 2*i + 0.45, num2str(b(j)),'FontUnits','normalized','FontSize',fs,'FontName','fixedwidth','HorizontalAlignment','center','VerticalAlignment','bottom');
+				sideHints(2*i,j).UserData.num = b(j);
+			end
 		end
-		ax.XLim = [sideHint.Extent(1)-0.5, 8.025];
-		ax.YLim = [topHint.Extent(2) - topHint.Extent(4), botHint.Extent(2)];
 	end
 	
 	function [B] = dominoGen()
@@ -154,6 +155,7 @@ function [] = Domino_Theory()
 	end
 	
 	function [] = patchGrid()
+		patch([1 1 8 8],[1 9 9 1],[1 1 1],'EdgeAlpha',0);
 		gridlines = gobjects(9+8,1);
 		for i = 1:9
 			gridlines(i) = line([1 8], [i i],'Color',0.5*ones(1,3) - 0.5*mod(i,2),'Visible','on','LineWidth',2. + 1.75*mod(i,2));
@@ -168,7 +170,11 @@ function [] = Domino_Theory()
 	end
 	
 	function [] = resize(~,~)
-		
+% 		ax.Units = 'pixels';
+% 		disp(ax.TightInset) %[0 0 0]
+% 		disp(ax.PlotBoxAspectRatio) %[3.5 4 1]
+% 		disp(ax.Position) % [0.2986    0.0995    0.6968    0.7958] when normalized
+% 		ax.Units = 'normalized';
 	end
 	
 	function [] = buildEnterTool()
@@ -253,11 +259,64 @@ function [] = Domino_Theory()
 				notesGrid(r,c).String = notesGrid(1,1).UserData.none;
 			end
 			userGrid(r,c) = num;
+			hintUpdate(r,c);
 			mistakeChecks(r,c);
 
 			% display the check mark if the puzzle is completed
 			finished = winCheck();
 			highlight(false);
+		end
+		
+		% updates all the hints after entering a number
+		function [] = hintUpdate(r,c)
+			% may want to know if there's mistake before this (ie too many
+			% 3s entered in a row)
+			
+			
+			if mod(r,2) % top hints
+				userNums = userGrid(1:2:7,c);
+				hints = zeros(1,4);
+				for i = 1:4
+					hints(i) = topHints(c,i).UserData.num;
+				end
+				for i = 1:4
+					if ~isnan(userNums(i))
+						hints(find(userNums(i)==hints,1)) = -1;
+					end
+				end
+				for i = 1:4
+					topHints(c,i).Color = [1 1 1]*0.675*(hints(i) < 0);
+				end
+			else % bot hints
+				userNums = userGrid(2:2:8,c);
+				hints = zeros(1,4);
+				for i = 1:4
+					hints(i) = botHints(c,i).UserData.num;
+				end
+				for i = 1:4
+					if ~isnan(userNums(i))
+						hints(find(userNums(i)==hints,1)) = -1;
+					end
+				end
+				for i = 1:4
+					botHints(c,i).Color = [1 1 1]*0.675*(hints(i) < 0);
+				end
+			end
+			
+			% side hints
+			userNums = userGrid(r,:);
+			hints = zeros(1,7);
+			for i = 1:7
+				hints(i) = sideHints(r,i).UserData.num;
+			end
+			for i = 1:7
+				if ~isnan(userNums(i))
+					hints(find(userNums(i)==hints,1)) = -1;
+				end
+			end
+			for i = 1:7
+				sideHints(r,i).Color = [1 1 1]*0.675*(hints(i) < 0);
+			end
 		end
 		
 		% Checks for mistakes
@@ -332,11 +391,12 @@ function [] = Domino_Theory()
 	
 	function [] = figureSetup()
 		f = figure(1);
-		clf
+		clf('reset')
 		f.MenuBar = 'none';
 		f.Name = 'Domino Theory';
 		f.NumberTitle = 'off';
 		f.WindowButtonDownFcn = @click;
+% 		f.Position(3) = 1.5*f.Position(4);
 		f.SizeChangedFcn = @resize;
 		f.UserData = 'normal';
 		f.Resize = 'on';
@@ -345,16 +405,17 @@ function [] = Domino_Theory()
 		
 		
 		ax = axes('Parent',f);
-		ax.Position = [0.25 0 0.75 1];
+		ax.Position = [0.3 0 0.7 1];
 		ax.YDir = 'reverse';
 		ax.YTick = [];
 		ax.XTick = [];
 		ax.XColor = f.Color;
 		ax.YColor = f.Color;
-% 		ax.Color = f.Color;
-		ax.XLim = [1 8];
-		ax.YLim = [0.5 9.5];
+		ax.Color = f.Color;
 		axis equal
+		ax.XLim = [-9/7 8];
+		ax.YLim = [0 10];
+		
 		
 		gValues.noteHeight = 0.7;
 		gValues.noteOnColor = [0.94 0.94 1];
@@ -369,7 +430,7 @@ function [] = Domino_Theory()
 			'Style','pushbutton',...
 			'String','New',...
 			'Callback',@newGame,...
-			'Position',[0.05 0.25 0.1 0.1],...
+			'Position',[0.05 0 0.1 0.1],...
 			'TooltipString','New Puzzle',...
 			'FontUnits','normalized',...
 			'FontSize',0.25);
