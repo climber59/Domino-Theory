@@ -22,7 +22,7 @@ function [] = Domino_Theory()
 	sideHints = gobjects(8,7);
 	domHints = gobjects(28,1);
 	domHintsP = gobjects(28,1);
-	mistakes = zeros(8,7);
+% 	mistakes = zeros(8,7);
 	
 	blobs = [];
 	checkmark = [];
@@ -79,7 +79,7 @@ function [] = Domino_Theory()
 		
 		finished = false;
 		noteMode = false;
-		mistakes = zeros(8,7);
+% 		mistakes = zeros(8,7);
 		userGrid = nan(8,7);
 		patchGrid();
 		numGrid = dominoGen();
@@ -275,7 +275,7 @@ function [] = Domino_Theory()
 			userGrid(r,c) = nan; % remove any "big" numbers
 			if ~isnan(oldnum) % update hints if replacing a big num with notes
 				hintUpdate(r, c, oldnum);
-				errorCheck(r,c, oldnum);
+				errorCheck()%r,c, oldnum);
 			end
 			textGrid(r,c).String = '';
 			if ~isnan(num)% change a specific number
@@ -313,7 +313,7 @@ function [] = Domino_Theory()
 			end
 			userGrid(r,c) = num;
 			hintUpdate(r,c, oldnum);
-			errorCheck(r,c, oldnum);
+			errorCheck()%r,c, oldnum);
 
 			% display the check mark if the puzzle is completed
 			finished = winCheck();
@@ -413,14 +413,41 @@ function [] = Domino_Theory()
 	end
 	
 	function [] = errorCheck()%r, c, oldnum)
+		mistakes = zeros(8,7);
 		for r = 1:8
-			
+			% side mistakes
+			userNums = userGrid(r,:);
+			hints = zeros(1,7);
+			for i = 1:7
+				hints(i) = sideHints(r,i).UserData.num;
+			end
+			hintsO = hints;
+			for i = 1:7
+				if ~isnan(userNums(i))
+					hints(find(userNums(i)==hints,1)) = -1;
+				end
+			end
+			if sum(hints<0) ~= sum(~isnan(userNums)) % entered nums don't match hints
+				for i = unique(userNums(~isnan(userNums))) % check through each entered number
+					if sum(userNums==i) > sum(hintsO==i) % a number appears too many times (including when it's not supposed to appear)
+						mistakes(r,userNums==i) = true;
+						if any(hintsO==i) % prevents trying to turn '5' red when there aren't any 5s in the row
+							for j = 1:7
+								if hintsO(j)==i
+									sideHints(r,j).Color = [1 0 0]; % turn side hints red
+								end
+							end
+						else
+							% do something else to indicate why this is an
+							% error. this text is just to make a warning
+							'side error'
+						end
+					end
+				end
+			end
 		end
 		for c = 1:7
-			
-		end
-		% top mistakes
-		if mod(r,2)
+			% top mistakes
 			userNums = userGrid(1:2:7,c)';
 			hints = zeros(1,4);
 			for i = 1:4
@@ -436,8 +463,12 @@ function [] = Domino_Theory()
 				for i = unique(userNums(~isnan(userNums))) % check through each entered number
 					if sum(userNums==i) > sum(hintsO==i) % a number appears too many times (including when it's not supposed to appear)
 						mistakes(2*find(userNums==i)-1,c) = true;
-						if any(hintsO==i) % prevents trying to turn '5' red when there aren't any 5s in the row
-							topHints(c,hintsO==i).Color = [1 0 0]; % turn side hints red
+						if any(hintsO==i) % prevents trying to turn '5' red when there aren't any 5s in the col
+							for j = 1:4
+								if hintsO(j)==i
+									topHints(c,j).Color = [1 0 0]; % turn top hints red
+								end
+							end
 						else
 							% do something else to indicate why this is an
 							% error. this text is just to make a warning
@@ -447,7 +478,7 @@ function [] = Domino_Theory()
 				end
 			end
 
-		else % bot mistakes
+			% bot mistakes
 			userNums = userGrid(2:2:8,c)';
 			hints = zeros(1,4);
 			for i = 1:4
@@ -463,8 +494,12 @@ function [] = Domino_Theory()
 				for i = unique(userNums(~isnan(userNums))) % check through each entered number
 					if sum(userNums==i) > sum(hintsO==i) % a number appears too many times (including when it's not supposed to appear)
 						mistakes(2*find(userNums==i)-1,c) = true;
-						if any(hintsO==i) % prevents trying to turn '5' red when there aren't any 5s in the row
-							botHints(c,hintsO==i).Color = [1 0 0]; % turn side hints red
+						if any(hintsO==i) % prevents trying to turn '5' red when there aren't any 5s in the col
+							for j = 1:4
+								if hintsO(j)==i
+									botHints(c,j).Color = [1 0 0]; % turn bot hints red
+								end
+							end
 						else
 							% do something else to indicate why this is an
 							% error. this text is just to make a warning
@@ -475,38 +510,31 @@ function [] = Domino_Theory()
 			end
 		end
 
-		% side mistakes
-		userNums = userGrid(r,:);
-		hints = zeros(1,7);
-		for i = 1:7
-			hints(i) = sideHints(r,i).UserData.num;
-		end
-		hintsO = hints;
-		for i = 1:7
-			if ~isnan(userNums(i))
-				hints(find(userNums(i)==hints,1)) = -1;
-			end
-		end
-% 			userNums
-% 			hints
-% 			hintsO
-		if sum(hints<0) ~= sum(~isnan(userNums)) % entered nums don't match hints
-			for i = unique(userNums(~isnan(userNums))) % check through each entered number
-				if sum(userNums==i) > sum(hintsO==i) % a number appears too many times (including when it's not supposed to appear)
-					mistakes(r,userNums==i) = true;
-% 						userNum
-					if any(hintsO==i) % prevents trying to turn '5' red when there aren't any 5s in the row
-						sideHints(r,hintsO==i).Color = [1 0 0]; % turn side hints red
-					else
-						% do something else to indicate why this is an
-						% error. this text is just to make a warning
-						'side error'
-					end
+		% domino mistakes
+		% check for upside down dominos
+		% check for repeated dominos
+		doms = zeros(28,1);
+		domsLocs = cell(28,1);
+		for r = 1:2:7
+			for c = 1:7
+				if userGrid(r+1,c) < userGrid(r,c) % upside down domino
+					mistakes(r,c) = true;
+					mistakes(r+1,c) = true;
+				end
+				if ~any(isnan([userGrid(r,c) userGrid(r+1,c)])) % completed domino
+					ind = patchInd(userGrid(r,c),userGrid(r+1,c));
+					doms(ind) = 1 + doms(ind); % count how many times it appears
+					domsLocs{ind} = [domsLocs{ind}; r c; r+1 c]; % store r,c of every domino
 				end
 			end
 		end
-
-		% domino mistakes
+		for i = 1:length(doms)
+			if doms(i) > 1 % any domino that appears more than once
+				for j = 1:size(domsLocs{i},1)
+					mistakes(domsLocs{i}(j,1),domsLocs{i}(j,2)) = true; % mark all of them as mistakes
+				end
+			end
+		end
 
 
 
