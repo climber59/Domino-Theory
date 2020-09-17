@@ -1,5 +1,24 @@
 %{
+use the open space outside dom hints for other ui elements, like ng,
+starting hints, etc
+- add starting difficulty options in the first place
 
+see what elements need scaling code
+- dom hint dots definitely do
+
+try to fix the enter tool movement code
+
+wincheck() doesn't do anything
+- should be easy now that errorCheck() works
+
+break up the grid so it looks more like dominos?
+- like the dom hints
+
+should entering the number already there clear it?
+
+upside down domino indicator is ugly and hard to read
+
+top/bot hint indicators don't touch and I wish they did.
 
 scroll wheel to change size of enter tool?
 %}
@@ -194,7 +213,7 @@ function [] = Domino_Theory()
 		
 		for r = 1:8
 			for c = 1:7
-				textGrid(r,c) = text(c+0.5,r+0.5,' ','FontUnits','normalized','FontSize',gValues.noteHeight/8,'HorizontalAlignment','center','VerticalAlignment','middle');
+				textGrid(r,c) = text(c+0.5,r+0.5,' ','FontUnits','normalized','FontSize',gValues.noteHeight,'HorizontalAlignment','center','VerticalAlignment','middle');
 				notesGrid(r,c) = text(c+m, r+y, none,'FontName','fixedwidth','FontUnits','normalized','FontSize',fs,'HorizontalAlignment','right','VerticalAlignment','bottom','Color',0.2*[1 1 1]);
 			end
 		end
@@ -270,13 +289,12 @@ function [] = Domino_Theory()
 		c = numPanel.UserData(2);
 		
 		% Entering/removing notes
-		oldnum = userGrid(r,c); % needed for domino hints
 		if noteMode
-			userGrid(r,c) = nan; % remove any "big" numbers
-			if ~isnan(oldnum) % update hints if replacing a big num with notes
-				hintUpdate(r, c, oldnum);
-				errorCheck()%r,c, oldnum);
+			if ~isnan(userGrid(r,c)) % update hints and errors if replacing a big num with notes
+				errorCheck(r,c);
 			end
+			userGrid(r,c) = nan; % remove any "big" numbers
+			
 			textGrid(r,c).String = '';
 			if ~isnan(num)% change a specific number
 				if notesGrid(r,c).String{cellRow}(strInds(1)) == ' '
@@ -299,7 +317,7 @@ function [] = Domino_Theory()
 			end
 		else
 			% Enter 'big' number
-			textGrid(r,c).FontSize = gValues.noteHeight/8;
+			textGrid(r,c).FontSize = gValues.noteHeight;
 			textGrid(r,c).String = newNumStr;
 			if textGrid(r,c).Extent(3) > 1 % scale text to fit in the box
 				textGrid(r,c).FontSize = textGrid(r,c).FontSize/textGrid(r,c).Extent(3);
@@ -312,90 +330,12 @@ function [] = Domino_Theory()
 				notesGrid(r,c).String = notesGrid(1,1).UserData.none;
 			end
 			userGrid(r,c) = num;
-			hintUpdate(r,c, oldnum);
-			errorCheck()%r,c, oldnum);
+			errorCheck(r,c);
 
 			% display the check mark if the puzzle is completed
 			finished = winCheck();
 			highlight(false);
 		end
-		
-		% updates all the hints after entering a number
-		function [] = hintUpdate(r,c, oldnum)
-			if mod(r,2) % top hints
-				userNums = userGrid(1:2:7,c);
-				hints = zeros(1,4);
-				for i = 1:4
-					hints(i) = topHints(c,i).UserData.num;
-				end
-				for i = 1:4
-					if ~isnan(userNums(i))
-						hints(find(userNums(i)==hints,1)) = -1;
-					end
-				end
-				for i = 1:4
-					topHints(c,i).Color = [1 1 1]*0.675*(hints(i) < 0);
-				end
-			else % bot hints
-				userNums = userGrid(2:2:8,c);
-				hints = zeros(1,4);
-				for i = 1:4
-					hints(i) = botHints(c,i).UserData.num;
-				end
-				for i = 1:4
-					if ~isnan(userNums(i))
-						hints(find(userNums(i)==hints,1)) = -1;
-					end
-				end
-				for i = 1:4
-					botHints(c,i).Color = [1 1 1]*0.675*(hints(i) < 0);
-				end
-			end
-			
-			% side hints
-			userNums = userGrid(r,:);
-			hints = zeros(1,7);
-			for i = 1:7
-				hints(i) = sideHints(r,i).UserData.num;
-			end
-			for i = 1:7
-				if ~isnan(userNums(i))
-					hints(find(userNums(i)==hints,1)) = -1;
-				end
-			end
-			for i = 1:7
-				sideHints(r,i).Color = [1 1 1]*0.675*(hints(i) < 0);
-			end
-			
-			
-			
-			% domino hints
-			%{
-			if new num completes a domino, grey out the dom.
-			if old num was also a domino, turn on the old dom.
-			if removing a num from a completed domino, turn on the old dom
-			%}
-			inds = sort(sub2ind(size(userGrid),[r r+(mod(r,2)*2-1)],[c c]));
-			if all(~isnan(userGrid(inds)))
-				ind = patchInd(userGrid(inds)); % grey out new domino
-				domHintsP(ind).FaceColor = [1 1 1]*0.5;
-			end
-			if all(~isnan([oldnum, userGrid(r+(mod(r,2)*2-1), c)])) || isnan(userGrid(r,c)) % oldnum was a domino, got replaced or removed
-				ind = patchInd(oldnum, userGrid(r+(mod(r,2)*2-1),c)); % turn on old domino
-				domHintsP(ind).FaceColor = [1 1 1];
-				% if a domino appears twice (user error), this will turn on
-				% the domino when it's removed even though it should be
-				% greyed out because of a different user domino. This might
-				% need to turn into checking the whole board to prevent
-				% this glitch
-			end
-			
-
-			
-		end
-		
-		
-		
 		
 	end
 	
@@ -412,7 +352,10 @@ function [] = Domino_Theory()
 		index = p(t+1) + b - t;
 	end
 	
-	function [] = errorCheck()%r, c, oldnum)
+	% Checks for errors and hint completion. Errors will turn the relevant
+	% hint and number red. Completed hints will turn grey.
+	% r0, c0 is the row/col of that last place with a changed big number
+	function [] = errorCheck(r0, c0)
 		mistakes = zeros(8,7);
 		for r = 1:8
 			% side mistakes
@@ -420,6 +363,7 @@ function [] = Domino_Theory()
 			hints = zeros(1,7);
 			for i = 1:7
 				hints(i) = sideHints(r,i).UserData.num;
+				sideHints(r,i).BackgroundColor = 'none'; % remove red background from side hints, will get readded later if needed
 			end
 			hintsO = hints;
 			for i = 1:7
@@ -427,20 +371,25 @@ function [] = Domino_Theory()
 					hints(find(userNums(i)==hints,1)) = -1;
 				end
 			end
+			if r == r0 % grey out only in the current row
+				for i = 1:7
+					sideHints(r0,i).Color = [1 1 1]*0.675*(hints(i) < 0); % grey out fulfilled side hints. also turns unfulfilled hints black
+				end
+			end
 			if sum(hints<0) ~= sum(~isnan(userNums)) % entered nums don't match hints
 				for i = unique(userNums(~isnan(userNums))) % check through each entered number
 					if sum(userNums==i) > sum(hintsO==i) % a number appears too many times (including when it's not supposed to appear)
 						mistakes(r,userNums==i) = true;
-						if any(hintsO==i) % prevents trying to turn '5' red when there aren't any 5s in the row
+						if any(hintsO==i) % prevents trying to turn '5' red when there aren't any 5s in the row, ie hintsO==i is all 0s
 							for j = 1:7
 								if hintsO(j)==i
 									sideHints(r,j).Color = [1 0 0]; % turn side hints red
 								end
 							end
 						else
-							% do something else to indicate why this is an
-							% error. this text is just to make a warning
-							'side error'
+							for j = 1:7
+								sideHints(r,j).BackgroundColor = gValues.hintBgColor; % turn side hint's background red to show a number shouldn't be there
+							end
 						end
 					end
 				end
@@ -452,13 +401,19 @@ function [] = Domino_Theory()
 			hints = zeros(1,4);
 			for i = 1:4
 				hints(i) = topHints(c,i).UserData.num;
+				topHints(c,i).BackgroundColor = 'none'; % remove red background from top hints, will get readded later if needed
 			end
 			hintsO = hints;
 			for i = 1:4
 				if ~isnan(userNums(i))
 					hints(find(userNums(i)==hints,1)) = -1;
 				end
-			end				
+			end
+			if c == c0
+				for i = 1:4
+					topHints(c,i).Color = [1 1 1]*0.675*(hints(i) < 0);
+				end
+			end
 			if sum(hints<0) ~= sum(~isnan(userNums)) % entered nums don't match hints
 				for i = unique(userNums(~isnan(userNums))) % check through each entered number
 					if sum(userNums==i) > sum(hintsO==i) % a number appears too many times (including when it's not supposed to appear)
@@ -470,9 +425,9 @@ function [] = Domino_Theory()
 								end
 							end
 						else
-							% do something else to indicate why this is an
-							% error. this text is just to make a warning
-							'top error'
+							for j = 1:4
+								topHints(c,j).BackgroundColor = gValues.hintBgColor; % turn top hint's background red to show a number shouldn't be there
+							end
 						end
 					end
 				end
@@ -483,6 +438,7 @@ function [] = Domino_Theory()
 			hints = zeros(1,4);
 			for i = 1:4
 				hints(i) = botHints(c,i).UserData.num;
+				botHints(c,i).BackgroundColor = 'none'; % remove red background from bot hints, will get readded later if needed
 			end
 			hintsO = hints;
 			for i = 1:4
@@ -490,10 +446,15 @@ function [] = Domino_Theory()
 					hints(find(userNums(i)==hints,1)) = -1;
 				end
 			end
+			if c == c0
+				for i = 1:4
+					botHints(c,i).Color = [1 1 1]*0.675*(hints(i) < 0); % grey out bot hints in current column
+				end
+			end
 			if sum(hints<0) ~= sum(~isnan(userNums)) % entered nums don't match hints
 				for i = unique(userNums(~isnan(userNums))) % check through each entered number
 					if sum(userNums==i) > sum(hintsO==i) % a number appears too many times (including when it's not supposed to appear)
-						mistakes(2*find(userNums==i)-1,c) = true;
+						mistakes(2*find(userNums==i),c) = true;
 						if any(hintsO==i) % prevents trying to turn '5' red when there aren't any 5s in the col
 							for j = 1:4
 								if hintsO(j)==i
@@ -501,9 +462,9 @@ function [] = Domino_Theory()
 								end
 							end
 						else
-							% do something else to indicate why this is an
-							% error. this text is just to make a warning
-							'bot error'
+							for j = 1:4
+								botHints(c,j).BackgroundColor = gValues.hintBgColor; % turn bot hint's background red to show a number shouldn't be there
+							end
 						end
 					end
 				end
@@ -517,11 +478,14 @@ function [] = Domino_Theory()
 		domsLocs = cell(28,1);
 		for r = 1:2:7
 			for c = 1:7
+				textGrid(r,c).BackgroundColor = 'none';
+				textGrid(r+1,c).BackgroundColor = 'none';
 				if userGrid(r+1,c) < userGrid(r,c) % upside down domino
 					mistakes(r,c) = true;
 					mistakes(r+1,c) = true;
-				end
-				if ~any(isnan([userGrid(r,c) userGrid(r+1,c)])) % completed domino
+					textGrid(r,c).BackgroundColor = gValues.hintBgColor;
+					textGrid(r+1,c).BackgroundColor = gValues.hintBgColor;
+				elseif ~any(isnan([userGrid(r,c) userGrid(r+1,c)])) % completed domino
 					ind = patchInd(userGrid(r,c),userGrid(r+1,c));
 					doms(ind) = 1 + doms(ind); % count how many times it appears
 					domsLocs{ind} = [domsLocs{ind}; r c; r+1 c]; % store r,c of every domino
@@ -533,12 +497,17 @@ function [] = Domino_Theory()
 				for j = 1:size(domsLocs{i},1)
 					mistakes(domsLocs{i}(j,1),domsLocs{i}(j,2)) = true; % mark all of them as mistakes
 				end
+				domHintsP(i).FaceColor = [1 0 0]; % error, mark dom hint red
+			elseif doms(i) == 1
+				domHintsP(i).FaceColor = [1 1 1]*0.5; % fulfilled exactly once, mark grey
+			else
+				domHintsP(i).FaceColor = [1 1 1]; % unfulfilled, mark white
 			end
 		end
 
 
 
-		mistakes
+% 		mistakes
 		for i = 1:8
 			for j = 1:7
 				textGrid(i,j).Color(1) = mistakes(i,j);
@@ -564,69 +533,10 @@ function [] = Domino_Theory()
 		may be too linked between error checking and hint updating to
 		be done separately. frankly most of them are linked and there's
 		more repeated code than i'd prefer
+		-- there's so much repeated code that my next plan is to combine
+		hintUpdate() and errorCheck() if possible. at least the dom part
 
 
-
-
-
-		% side hint checking
-		%{
-		sum(hints<0) ~= sum(isnan(userNums)) will tell you if there is
-		a mistake.
-
-		red the entire row?
-		-easy
-
-		red the numbers in question?
-		- easy for a number that shouldn't appear
-		- trickier for too many of a number sum(hintsO == x) ==	sum(userNums == x)
-		%}
-		userNums = userGrid(r,:);
-		hints = zeros(1,7);
-		for i = 1:7
-			hints(i) = sideHints(r,i).UserData.num;
-		end
-		hintsO = hints;
-		for i = 1:7
-			if ~isnan(userNums(i))
-				hints(find(userNums(i)==hints,1)) = -1;
-			end
-		end
-		for i = 1:7
-			sideHints(r,i).Color = [1 1 1]*0.675*(hints(i) < 0);
-		end
-		if sum(hints<0) ~= sum(~isnan(userNums)) % entered nums don't match hints
-			mistake = true;
-			userNums
-			hints
-			hintsO
-
-			for i = unique(userNums(~isnan(userNums))) % check through each entered number
-				[i sum(userNums==i)	sum(hintsO==i)]
-				if sum(userNums==i) > sum(hintsO==i) % a number appears too many times (including when it's not supposed to appear)
-					% turn side hints red
-					if ~isempty(hintsO==i)
-						sideHints(r,hintsO==i).Color(1) = 1;
-					end
-					% turn big number red
-					for j = 1:7
-						if userNums(j) == i
-							textGrid(r,j).Color(1) = 1;
-							fprintf('\n%d %d turned red by side',r,j);
-						end
-					end
-				end
-			end
-		end
-
-
-% 			doms
-		inds = sort(sub2ind(size(userGrid),[r r+(mod(r,2)*2-1)],[c c]));
-		if diff(userGrid(inds)) < 0 % top > bottom on the domino, mistake
-			mistake = true;
-			textGrid(inds(1)).Color(1) = 1; % should also mark the domino in some way
-			textGrid(inds(2)).Color(1) = 1;
-			fprintf('\n%d %d turned red by dom',r,j);
 
 
 
@@ -722,9 +632,10 @@ function [] = Domino_Theory()
 		ax.YLim = [0 10];
 		
 		
-		gValues.noteHeight = 0.7;
+		gValues.noteHeight = 0.7/8;
 		gValues.noteOnColor = [0.94 0.94 1];
 		gValues.noteOffColor = [0.94 0.94 0.94];
+		gValues.hintBgColor = [1 .25 .25];
 % 		gValues.opHeight = 0.15;
 % 		gValues.startN = 5;
 		
@@ -791,6 +702,8 @@ end
 		% also has text above and to the side of the "board." Using the
 		% point clicked in the figure (f.CurrentPoint) is good enough for
 		% now.
+		
+% 		% enter tool placement code for when it appears
 % 		ax.Units = 'pixels';
 % 		'==============================================================='
 % 		ax.CurrentPoint([3, 1])
