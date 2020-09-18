@@ -4,6 +4,10 @@ starting hints, etc
 - add starting difficulty options in the first place
 - reset button
 
+decide on updateNotes()
+- possibly trickier with repetitions, but unique() should help
+- would it check agains doms? or just side/top/bot hints?
+
 see what elements need scaling code
 - dom hint dots definitely do
 
@@ -44,12 +48,18 @@ function [] = Domino_Theory()
 	sideHints = gobjects(8,7);
 	domHints = gobjects(28,1);
 	domHintsP = gobjects(28,1);
-	
-	blobs = [];
 	checkmark = [];
+	
+	debugging = false; 
 	
 	figureSetup();
 	newGame();
+	
+	% debug function to display solution to help speed up testing
+	function [] = cheat()
+		fprintf('\nAnswer Key:\n')
+		disp(numGrid)
+	end
 	
 	function [] = click(~,~)
 % 		[f.CurrentPoint]
@@ -103,11 +113,15 @@ function [] = Domino_Theory()
 		userGrid = nan(8,7);
 		
 		drawBackground();
+		
 		numGrid = dominoGen();
 		hintNums();
 		blankNums();
 		buildEnterTool();
-		checkmark = patch(1.5 + 6*[0 9 37 87 100 42]/100, 1.9 + 6*[72 59 78 3 12 100]/100,[0 1 0],'FaceAlpha',0.5,'EdgeColor','none','Visible','off');
+		
+		if debugging
+			cheat();
+		end
 	end
 	
 	function [] = hintNums()
@@ -235,6 +249,8 @@ function [] = Domino_Theory()
 		selectorBox = patch([0 1 1 0],[0 0 1 1],[1 1 1],'EdgeColor',0.5*ones(1,3),'Visible','off');
 		selectorBox.UserData.x = [0 1 1 0];
 		selectorBox.UserData.y = [0 0 1 1];
+		
+		checkmark = patch(1.5 + 6*[0 9 37 87 100 42]/100, 1.9 + 6*[72 59 78 3 12 100]/100,[0 1 0],'FaceAlpha',0.5,'EdgeColor','none','Visible','off'); % displays when you win
 	end
 	
 	function [] = resize(~,~)
@@ -543,28 +559,20 @@ function [] = Domino_Theory()
 		%}
 	end
 	
-	function [won] = winCheck()
-		won = false; % none of the code below is adapted yet, so it will just give a win and annoy me in testing
-		return
-		
-		won = sum(sum(~isnan(userGrid)))==56; %everything filled in
+	function [won] = winCheck()		
+		won = sum(sum(~isnan(userGrid))) == 56; %everything filled in
 		if ~won
 			return
 		end
 		
-		for i = 1:56 % could probably be shortened by something like textGrid(:).Color(1), but probably not because matlab doesn't seem to like my dot indexing styles
+		for i = 1:56
 			won = (textGrid(i).Color(1)==0); % no red numbers
 			if ~won
 				return
 			end
 		end
 		
-		for i = 1:length(blobs)
-			won = (blobs(i).UserData.opT.Color(1)==0); % no red operations
-			if ~won
-				return
-			end
-		end
+		% no red hints - top/bot/side or dom
 		
 		won = true; % no mistakes, display check mark, and return true
 		checkmark.Visible = 'on';
@@ -649,7 +657,7 @@ function [] = Domino_Theory()
 			'Position',[0.05 0 0.1 0.1],...
 			'TooltipString','New Puzzle',...
 			'FontUnits','normalized',...
-			'FontSize',0.25);
+			'FontSize',0.25); %#ok<NASGU>
 		
 % 		clearer = uicontrol(...
 % 			'Parent',f,...
