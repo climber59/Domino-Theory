@@ -1,4 +1,9 @@
 %{
+
+Based on Domino Theory by Margery Albis in Games: World of Puzzles, February 2020.
+
+%}
+%{
 use the open space outside dom hints for other ui elements, like ng,
 starting hints, etc
 - add starting difficulty options in the first place
