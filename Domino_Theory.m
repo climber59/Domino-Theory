@@ -2,6 +2,7 @@
 use the open space outside dom hints for other ui elements, like ng,
 starting hints, etc
 - add starting difficulty options in the first place
+- reset button
 
 see what elements need scaling code
 - dom hint dots definitely do
@@ -13,6 +14,8 @@ wincheck() doesn't do anything
 
 break up the grid so it looks more like dominos?
 - like the dom hints
+
+use gValues in more places
 
 should entering the number already there clear it?
 
@@ -41,7 +44,6 @@ function [] = Domino_Theory()
 	sideHints = gobjects(8,7);
 	domHints = gobjects(28,1);
 	domHintsP = gobjects(28,1);
-% 	mistakes = zeros(8,7);
 	
 	blobs = [];
 	checkmark = [];
@@ -98,13 +100,11 @@ function [] = Domino_Theory()
 		
 		finished = false;
 		noteMode = false;
-% 		mistakes = zeros(8,7);
 		userGrid = nan(8,7);
-		patchGrid();
+		
+		drawBackground();
 		numGrid = dominoGen();
-		drawnow;
 		hintNums();
-		drawnow;
 		blankNums();
 		buildEnterTool();
 		checkmark = patch(1.5 + 6*[0 9 37 87 100 42]/100, 1.9 + 6*[72 59 78 3 12 100]/100,[0 1 0],'FaceAlpha',0.5,'EdgeColor','none','Visible','off');
@@ -222,7 +222,7 @@ function [] = Domino_Theory()
 		delete(temp);
 	end
 	
-	function [] = patchGrid()
+	function [] = drawBackground()
 		patch([1 1 8 8],[1 9 9 1],[1 1 1],'EdgeAlpha',0);
 		gridlines = gobjects(9+8,1);
 		for i = 1:9
