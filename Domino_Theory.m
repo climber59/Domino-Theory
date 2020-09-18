@@ -2,7 +2,7 @@
 use the open space outside dom hints for other ui elements, like ng,
 starting hints, etc
 - add starting difficulty options in the first place
-- reset button
+- reset button?
 
 decide on updateNotes()
 - possibly trickier with repetitions, but unique() should help
@@ -12,9 +12,6 @@ see what elements need scaling code
 - dom hint dots definitely do
 
 try to fix the enter tool movement code
-
-wincheck() doesn't do anything
-- should be easy now that errorCheck() works
 
 break up the grid so it looks more like dominos?
 - like the dom hints
@@ -654,7 +651,7 @@ function [] = Domino_Theory()
 			'Style','pushbutton',...
 			'String','New',...
 			'Callback',@newGame,...
-			'Position',[0.05 0 0.1 0.1],...
+			'Position',[0.05 0.8 0.1 0.1],...
 			'TooltipString','New Puzzle',...
 			'FontUnits','normalized',...
 			'FontSize',0.25); %#ok<NASGU>
