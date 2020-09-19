@@ -4,6 +4,7 @@ Based on Domino Theory by Margery Albis in Games: World of Puzzles, February 202
 
 %}
 %{
+
 use the open space outside dom hints for other ui elements, like ng,
 starting hints, etc
 - add starting difficulty options in the first place
@@ -309,11 +310,11 @@ function [] = Domino_Theory()
 		% Entering/removing notes
 		if noteMode
 			if ~isnan(userGrid(r,c)) % update hints and errors if replacing a big num with notes
+				userGrid(r,c) = nan; % remove any "big" numbers
+				textGrid(r,c).String = '';
 				errorCheck(r,c);
 			end
-			userGrid(r,c) = nan; % remove any "big" numbers
 			
-			textGrid(r,c).String = '';
 			if ~isnan(num)% change a specific number
 				if notesGrid(r,c).String{cellRow}(strInds(1)) == ' '
 					s = newNumStr;
