@@ -4,23 +4,19 @@ Based on Domino Theory by Margery Albis in Games: World of Puzzles, February 202
 
 %}
 %{
-the value of 'num' in numFill() for 'x' and 'all' would make more sense
-reversed
+decide on updateNotes()
+- possibly trickier with repetitions, but unique() should help
+- would it check agains doms? or just side/top/bot hints?
+
+the value of 'num' in numFill() for 'x' and 'all' (' ' and nan) would make more sense
+reversed as nan currently means empty
 
 use the open space outside dom hints for other ui elements, like ng,
 starting hints, etc
 - add starting difficulty options in the first place
 - reset button?
 
-decide on updateNotes()
-- possibly trickier with repetitions, but unique() should help
-- would it check agains doms? or just side/top/bot hints?
-
 try to fix the enter tool movement code
-
-'cla' can probably be removed from newGame() as the board never changes
-size
-- ui creation code will need to be altered though.
 
 break up the grid so it looks more like dominos?
 - like the dom hints
@@ -33,7 +29,11 @@ upside down domino indicator is ugly and hard to read
 
 top/bot hint indicators don't touch and I wish they did.
 
-scroll wheel to change size of enter tool?
+'cla' can probably be removed from newGame() as the board never changes
+size
+- ui creation code will need to be altered though.
+
+
 %}
 function [] = Domino_Theory()
 	f = [];
@@ -54,7 +54,7 @@ function [] = Domino_Theory()
 	sideHints = gobjects(8,7);
 	domHints = gobjects(28,1);
 	domHintsP = gobjects(28,1);
-	gridlines = [];%gobjects(9+8,1);
+	gridlines = [];
 	checkmark = [];
 	
 	debugging = false; 
