@@ -19,6 +19,10 @@ see what elements need scaling code
 
 try to fix the enter tool movement code
 
+'cla' can probably be removed from newGame() as the board never changes
+size
+- ui creation code will need to be altered though.
+
 break up the grid so it looks more like dominos?
 - like the dom hints
 
@@ -128,6 +132,11 @@ function [] = Domino_Theory()
 	end
 	
 	function [] = hintNums()
+		if f.Position(3) / f.Position(4) > gValues.baseFigDim(1) / gValues.baseFigDim(2) % limited by height of figure
+			scale = f.Position(4)/gValues.baseFigDim(2);
+		else
+			scale = f.Position(3)/gValues.baseFigDim(1); % limited by width of figure
+		end
 		fs = 0.035;
 		topNums = numGrid(1:2:7,:); % each col gives the upper hints, each row gives side hints
 		botNums = numGrid(2:2:8,:); % each col gives the lower hints, each row gives side hints
@@ -166,7 +175,7 @@ function [] = Domino_Theory()
 			for j = i:6 % bot num
 				[xj, yj] = dotCoords(j); % ax.XLim is used here, but it would be better if ax.XLim was set based on these, not the other way around
 				domHintsP(ind) = patch('Faces',[1 2 3 4; 3 4 5 6],'Vertices',v + [ax.XLim(1) + (j + 0.5)/s, 9 + (0.4 - 2*i)/s],'FaceColor',[1 1 1],'LineJoin','round');
-				domHints(ind) = line(ax.XLim(1) + (j + 0.5 + [xi, xj])/s, 9 - (0.5 + 2*i + [0.9+yi, yj])/s,'MarkerSize',2,'LineStyle','none','Marker','o','MarkerFaceColor',[0 0 0],'MarkerEdgeColor',[0 0 0]);
+				domHints(ind) = line(ax.XLim(1) + (j + 0.5 + [xi, xj])/s, 9 - (0.5 + 2*i + [0.9+yi, yj])/s,'MarkerSize',2*scale,'LineStyle','none','Marker','o','MarkerFaceColor',[0 0 0],'MarkerEdgeColor',[0 0 0]);
 				ind = ind + 1;
 			end
 		end
@@ -256,7 +265,16 @@ function [] = Domino_Theory()
 		checkmark = patch(1.5 + 6*[0 9 37 87 100 42]/100, 1.9 + 6*[72 59 78 3 12 100]/100,[0 1 0],'FaceAlpha',0.5,'EdgeColor','none','Visible','off'); % displays when you win
 	end
 	
+	% handles ui resizing when the figure is resized
 	function [] = resize(~,~)
+		if f.Position(3) / f.Position(4) > gValues.baseFigDim(1) / gValues.baseFigDim(2) % limited by height of figure
+			scale = f.Position(4)/gValues.baseFigDim(2);
+		else
+			scale = f.Position(3)/gValues.baseFigDim(1); % limited by width of figure
+		end
+		for i = 1:length(domHints)
+			domHints(i).MarkerSize = 2*scale;
+		end
 % 		ax.Units = 'pixels';
 % 		disp(ax.TightInset) %[0 0 0]
 % 		disp(ax.PlotBoxAspectRatio) %[3.5 4 1]
@@ -621,7 +639,6 @@ function [] = Domino_Theory()
 		f.Name = 'Domino Theory';
 		f.NumberTitle = 'off';
 		f.WindowButtonDownFcn = @click;
-% 		f.Position(3) = 1.5*f.Position(4);
 		f.SizeChangedFcn = @resize;
 		f.UserData = 'normal';
 		f.Resize = 'on';
@@ -647,6 +664,7 @@ function [] = Domino_Theory()
 		gValues.noteOnColor = [0.94 0.94 1];
 		gValues.noteOffColor = [0.94 0.94 0.94];
 		gValues.hintBgColor = [1 .25 .25];
+		gValues.baseFigDim = [560 420]; % base [width,height] of a new figure, used for resizing
 % 		gValues.opHeight = 0.15;
 % 		gValues.startN = 5;
 		
