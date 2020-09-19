@@ -40,7 +40,7 @@ function [] = Domino_Theory()
 	ax = [];
 	numGrid = [];
 	
-	numPanel = [];
+	enterTool = [];
 	textGrid = [];
 	notesGrid = [];
 	userGrid = [];
@@ -76,7 +76,7 @@ function [] = Domino_Theory()
 		highlight(false); % unhighlight last box
 		m = floor(ax.CurrentPoint([3, 1]));% gives (r,c)
 		if any(m<1) || m(1)>8 || m(2)>7
-			numPanel.Visible = 'off';
+			enterTool.Visible = 'off';
 			return
 		end
 		
@@ -86,10 +86,10 @@ function [] = Domino_Theory()
 		y = f.CurrentPoint(2);
 		ax.Units = 'normalized';		
 		
-		numPanel.Position(1) = x;
-		numPanel.Position(2) = max(0, min([y, f.Position(4) - numPanel.Position(4)])); % keeps the tool from displaying off the screen vertically
+		enterTool.Position(1) = x;
+		enterTool.Position(2) = max(0, min([y, f.Position(4) - enterTool.Position(4)])); % keeps the tool from displaying off the screen vertically
 		
-		numPanel.UserData = m;
+		enterTool.UserData = m;
 		if strcmp(f.SelectionType,'alt')
 			noteMode = true;
 			but(2).Visible = 'on';
@@ -105,14 +105,14 @@ function [] = Domino_Theory()
 				but(i).BackgroundColor = gValues.noteOffColor;
 			end
 		end
-		numPanel.Visible = 'on';
+		enterTool.Visible = 'on';
 	end
 	
 	function [] = newGame(~,~)
 		cla
 		
-		numPanel.Visible = 'off';
-		numPanel.UserData = [1 1];
+		enterTool.Visible = 'off';
+		enterTool.UserData = [1 1];
 		
 		finished = false;
 		noteMode = false;
@@ -297,7 +297,7 @@ function [] = Domino_Theory()
 		
 		cols = 3;
 		nR = 3;
-		numPanel.Position(4) = numPanel.Position(3)/cols*nR;
+		enterTool.Position(4) = enterTool.Position(3)/cols*nR;
 		bottom = 1-1/nR;
 		for i = 0:6
 			[indI, indF] = regexp(notesGrid(1,1).UserData.all,[' ' num2str(i)]); % without the space in the expression, it finds the '2' in '-2'
@@ -308,7 +308,7 @@ function [] = Domino_Theory()
 			
 			if i > length(but) - 3
 				but(i+3) = uicontrol(...
-				'Parent',numPanel,...
+				'Parent',enterTool,...
 				'Style','pushbutton',...
 				'Units','normalized',...
 				'Position',[mod(i-1,cols)/cols 0.5, 1/cols 0.5],...
@@ -329,8 +329,8 @@ function [] = Domino_Theory()
 	
 	% called by clicking the buttons in enterTool
 	function [] = numFill(~,~,newNumStr, num, cellRow, strInds)
-		r = numPanel.UserData(1); % get grid location from numPanel
-		c = numPanel.UserData(2);
+		r = enterTool.UserData(1); % get grid location from numPanel
+		c = enterTool.UserData(2);
 		
 		% Entering/removing notes
 		if noteMode
@@ -352,18 +352,18 @@ function [] = Domino_Theory()
 			elseif isnan(num) % enter all possible notes (based on latin square)
 				notesGrid(r,c).String = notesGrid(1,1).UserData.all;
 				updateNotes(0,0,r,c); % remove blocked numbers
-				numPanel.Visible = 'off';
+				enterTool.Visible = 'off';
 				highlight(false);
 			else % X button pressed, clear the notes
 				notesGrid(r,c).String = notesGrid(1,1).UserData.none;
-				numPanel.Visible = 'off';
+				enterTool.Visible = 'off';
 				highlight(false);
 			end
 		else
 			% Enter 'big' number
 			textGrid(r,c).String = newNumStr;
 % 			textGrid(r,c).FontSize = textGrid(r,c).FontSize/max(textGrid(r,c).Extent([3 4])); % scale text to fit in the box
-			numPanel.Visible = 'off';
+			enterTool.Visible = 'off';
 
 			if isempty(num) % X button pressed
 				num = nan; % should only check if turning off red text			
@@ -604,7 +604,7 @@ function [] = Domino_Theory()
 	end
 	
 	function [] = updateNotes(~,~,ra,ca)
-		numPanel.Visible = 'off';
+		enterTool.Visible = 'off';
 		if nargin < 4 %if no specified ra/rc, check all notes in all squares
 			ra = 1:8;
 			ca = 1:7;
@@ -636,6 +636,11 @@ function [] = Domino_Theory()
 		end
 	end
 	
+	% changes the size of the enter tool when you use the mouse scroll wheel
+	function [] = scrollWheel(~,evt)
+		enterTool.Position([3,4]) = enterTool.Position([3,4])*1.1^-evt.VerticalScrollCount;		
+	end
+	
 	function [] = figureSetup()
 		f = figure(1);
 		clf('reset')
@@ -646,6 +651,7 @@ function [] = Domino_Theory()
 		f.SizeChangedFcn = @resize;
 		f.Resize = 'on';
 		f.Units = 'pixels';
+		f.WindowScrollWheelFcn = @scrollWheel;
 		
 		
 		
@@ -707,14 +713,14 @@ function [] = Domino_Theory()
 
 		% ========== Enter Tool ======
 		h = 0.175;
-		numPanel = uipanel(... % will need special resizing code
+		enterTool = uipanel(... % will need special resizing code
 			'Parent',f,...
 			'Units','normalized',...
 			'Position',[0.1 0.1, h*1.5*f.Position(4)/f.Position(3) h],...
 			'Units','pixels'); % if pixels is removed, need to alter code for where numpanel moves to when clicking
 		
 		but = uicontrol(...
-			'Parent',numPanel,...
+			'Parent',enterTool,...
 			'Style','pushbutton',...
 			'Units','normalized',...
 			'Position',[0 2/3, 1/3 1/3],...
@@ -722,7 +728,7 @@ function [] = Domino_Theory()
 			'FontSize',15,...
 			'Callback',{@numFill, ' ', []});	
 		but(2) = uicontrol(...
-			'Parent',numPanel,...
+			'Parent',enterTool,...
 			'Style','pushbutton',...
 			'Units','normalized',...
 			'Position',[1/3 2/3, 1/3 1/3],...
