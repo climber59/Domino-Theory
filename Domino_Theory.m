@@ -4,6 +4,8 @@ Based on Domino Theory by Margery Albis in Games: World of Puzzles, February 202
 
 %}
 %{
+the value of 'num' in numFill() for 'x' and 'all' would make more sense
+reversed
 
 use the open space outside dom hints for other ui elements, like ng,
 starting hints, etc
@@ -13,9 +15,6 @@ starting hints, etc
 decide on updateNotes()
 - possibly trickier with repetitions, but unique() should help
 - would it check agains doms? or just side/top/bot hints?
-
-see what elements need scaling code
-- dom hint dots definitely do
 
 try to fix the enter tool movement code
 
@@ -55,6 +54,7 @@ function [] = Domino_Theory()
 	sideHints = gobjects(8,7);
 	domHints = gobjects(28,1);
 	domHintsP = gobjects(28,1);
+	gridlines = [];%gobjects(9+8,1);
 	checkmark = [];
 	
 	debugging = false; 
@@ -98,7 +98,6 @@ function [] = Domino_Theory()
 			but(2).Visible = 'off';
 		end
 		highlight(true,m);
-		f.UserData = f.SelectionType;
 		for i = 3:9
 			if notesGrid(m(1),m(2)).String{but(i).UserData.cellRow}(but(i).UserData.strInds(1)) ~=' '
 				but(i).BackgroundColor = gValues.noteOnColor; % square color
@@ -132,11 +131,6 @@ function [] = Domino_Theory()
 	end
 	
 	function [] = hintNums()
-		if f.Position(3) / f.Position(4) > gValues.baseFigDim(1) / gValues.baseFigDim(2) % limited by height of figure
-			scale = f.Position(4)/gValues.baseFigDim(2);
-		else
-			scale = f.Position(3)/gValues.baseFigDim(1); % limited by width of figure
-		end
 		fs = 0.035;
 		topNums = numGrid(1:2:7,:); % each col gives the upper hints, each row gives side hints
 		botNums = numGrid(2:2:8,:); % each col gives the lower hints, each row gives side hints
@@ -175,7 +169,7 @@ function [] = Domino_Theory()
 			for j = i:6 % bot num
 				[xj, yj] = dotCoords(j); % ax.XLim is used here, but it would be better if ax.XLim was set based on these, not the other way around
 				domHintsP(ind) = patch('Faces',[1 2 3 4; 3 4 5 6],'Vertices',v + [ax.XLim(1) + (j + 0.5)/s, 9 + (0.4 - 2*i)/s],'FaceColor',[1 1 1],'LineJoin','round');
-				domHints(ind) = line(ax.XLim(1) + (j + 0.5 + [xi, xj])/s, 9 - (0.5 + 2*i + [0.9+yi, yj])/s,'MarkerSize',2*scale,'LineStyle','none','Marker','o','MarkerFaceColor',[0 0 0],'MarkerEdgeColor',[0 0 0]);
+				domHints(ind) = line(ax.XLim(1) + (j + 0.5 + [xi, xj])/s, 9 - (0.5 + 2*i + [0.9+yi, yj])/s,'MarkerSize',2*gValues.scale,'LineStyle','none','Marker','o','MarkerFaceColor',[0 0 0],'MarkerEdgeColor',[0 0 0]);
 				ind = ind + 1;
 			end
 		end
@@ -214,66 +208,78 @@ function [] = Domino_Theory()
 	
 	% generates the matrix representing the shuffled dominos
 	function [B] = dominoGen()
-		i = randperm(28)';
 		dominoes = [00 01 02 03 04 05 06 11 12 13 14 15 16 22 23 24 25 26 33 34 35 36 44 45 46 55 56 66]';
 
-		A = reshape(dominoes(i),[4,7]);
+		A = reshape(dominoes(randperm(28)'),[4,7]); % place the dominos randomly
 		B = zeros(8,7);
 		for j = 1:size(A,1)
-			B(2*j-1,:) = floor(A(j,:)/10);
-			B(2*j,:) = mod(A(j,:),10);
+			B(2*j-1,:) = floor(A(j,:)/10); % splits the 10s place into the upper half
+			B(2*j,:) = mod(A(j,:),10); % splits the 1s place into the lower half
 		end
 	end
 	
 	function [] = blankNums()
-		textGrid = gobjects(8,7);%matlab.graphics.primitive.Text.empty;
-		notesGrid = gobjects(8,7);%matlab.graphics.primitive.Text.empty;
+		textGrid = gobjects(8,7);
+		notesGrid = gobjects(8,7);
 		
-		fs = 1/(5*8);
-		temp = text(1, 1, '1','FontName','fixedwidth','FontUnits','normalized','FontSize',fs); % initial test object
-		m = 1 - 0.5*temp.Extent(3);
-		y = 1;
+		temp = text(1, 1, '1','FontName','fixedwidth','FontUnits','normalized','FontSize',gValues.noteFontSize); % initial test object to find note placement
+		noteOffset = 1 - 0.5*temp.Extent(3);
+		delete(temp);
+		
 		noteString = {' 0',' 1 2 3',' 4 5 6'};
-		notesGrid(1,1) = text(1+m, 1+y, noteString,'FontName','fixedwidth','FontUnits','normalized','FontSize',fs,'Visible','off','HorizontalAlignment','right','VerticalAlignment','bottom');
-		none = regexprep(noteString,'-|\d',' '); % get a blank copy of the string with only spaces
+		none = regexprep(noteString,'\d',' '); % get a blank copy of the string with only spaces
 		
 		for r = 1:8
 			for c = 1:7
-				textGrid(r,c) = text(c+0.5,r+0.5,' ','FontUnits','normalized','FontSize',gValues.noteHeight,'HorizontalAlignment','center','VerticalAlignment','middle');
-				notesGrid(r,c) = text(c+m, r+y, none,'FontName','fixedwidth','FontUnits','normalized','FontSize',fs,'HorizontalAlignment','right','VerticalAlignment','bottom','Color',0.2*[1 1 1]);
+				textGrid(r,c) = text(c + 0.5,r + 0.5,' ','FontUnits','normalized','FontSize',gValues.bigNumFontSize,'HorizontalAlignment','center','VerticalAlignment','middle');
+				notesGrid(r,c) = text(c + noteOffset, r + 1, none,'FontName','fixedwidth','FontUnits','normalized','FontSize',gValues.noteFontSize,'HorizontalAlignment','right','VerticalAlignment','bottom','Color',0.2*[1 1 1]);
 			end
 		end
 		notesGrid(1,1).UserData.all = noteString;
 		notesGrid(1,1).UserData.none = none;
-		delete(temp);
+		
 	end
 	
+	% draws the background, gridlines, selectorBox, and the checkmark
 	function [] = drawBackground()
-		patch([1 1 8 8],[1 9 9 1],[1 1 1],'EdgeAlpha',0);
+		patch([1 1 8 8],[1 9 9 1],[1 1 1],'EdgeAlpha',0); % creates the white background of the grid
 		gridlines = gobjects(9+8,1);
 		for i = 1:9
-			gridlines(i) = line([1 8], [i i],'Color',0.5*ones(1,3) - 0.5*mod(i,2),'Visible','on','LineWidth',2. + 1.75*mod(i,2));
+			gridlines(i) = line([1 8], [i i],'Color',0.5*ones(1,3) - 0.5*mod(i,2),'Visible','on','LineWidth',(gValues.gridLineWidth + gValues.gridLineWidthMinor*mod(i,2))*gValues.scale);
 		end
 		for i = 1:8
-			gridlines(9 + i) = line([i i], [1 9],'Color',zeros(1,3),'Visible','on','LineWidth',3.75);
+			gridlines(9 + i) = line([i i], [1 9],'Color',zeros(1,3),'Visible','on','LineWidth',(gValues.gridLineWidth + gValues.gridLineWidthMinor)*gValues.scale);
 		end
 			
 		selectorBox = patch([0 1 1 0],[0 0 1 1],[1 1 1],'EdgeColor',0.5*ones(1,3),'Visible','off');
-		selectorBox.UserData.x = [0 1 1 0];
-		selectorBox.UserData.y = [0 0 1 1];
+		selectorBox.UserData.x = selectorBox.XData;
+		selectorBox.UserData.y = selectorBox.YData;
 		
 		checkmark = patch(1.5 + 6*[0 9 37 87 100 42]/100, 1.9 + 6*[72 59 78 3 12 100]/100,[0 1 0],'FaceAlpha',0.5,'EdgeColor','none','Visible','off'); % displays when you win
 	end
 	
 	% handles ui resizing when the figure is resized
 	function [] = resize(~,~)
+		% get new axes scaling factor
 		if f.Position(3) / f.Position(4) > gValues.baseFigDim(1) / gValues.baseFigDim(2) % limited by height of figure
-			scale = f.Position(4)/gValues.baseFigDim(2);
+			gValues.scale = f.Position(4)/gValues.baseFigDim(2);
 		else
-			scale = f.Position(3)/gValues.baseFigDim(1); % limited by width of figure
+			gValues.scale = f.Position(3)/gValues.baseFigDim(1); % limited by width of figure
 		end
+		
+		% domino hint dots
 		for i = 1:length(domHints)
-			domHints(i).MarkerSize = 2*scale;
+			domHints(i).MarkerSize = 2*gValues.scale;
+		end
+		
+		% grid lines
+		L1 = gValues.gridLineWidth*gValues.scale;
+		L2 = gValues.gridLineWidthMinor*gValues.scale;
+		for i = 1:9
+			gridlines(i).LineWidth = L1 + L2*mod(i,2);
+		end
+		for i = 1:8
+			gridlines(9 + i).LineWidth = L1 + L2; %(gValues.gridLineWidth + gValues.gridLineWidthMinor)*gValues.scale;
 		end
 % 		ax.Units = 'pixels';
 % 		disp(ax.TightInset) %[0 0 0]
@@ -321,6 +327,7 @@ function [] = Domino_Theory()
 		end
 	end
 	
+	% called by clicking the buttons in enterTool
 	function [] = numFill(~,~,newNumStr, num, cellRow, strInds)
 		r = numPanel.UserData(1); % get grid location from numPanel
 		c = numPanel.UserData(2);
@@ -354,11 +361,8 @@ function [] = Domino_Theory()
 			end
 		else
 			% Enter 'big' number
-			textGrid(r,c).FontSize = gValues.noteHeight;
 			textGrid(r,c).String = newNumStr;
-			if textGrid(r,c).Extent(3) > 1 % scale text to fit in the box
-				textGrid(r,c).FontSize = textGrid(r,c).FontSize/textGrid(r,c).Extent(3);
-			end
+% 			textGrid(r,c).FontSize = textGrid(r,c).FontSize/max(textGrid(r,c).Extent([3 4])); % scale text to fit in the box
 			numPanel.Visible = 'off';
 
 			if isempty(num) % X button pressed
@@ -640,7 +644,6 @@ function [] = Domino_Theory()
 		f.NumberTitle = 'off';
 		f.WindowButtonDownFcn = @click;
 		f.SizeChangedFcn = @resize;
-		f.UserData = 'normal';
 		f.Resize = 'on';
 		f.Units = 'pixels';
 		
@@ -660,14 +663,24 @@ function [] = Domino_Theory()
 		ax.YLim = [0 10];
 		
 		
-		gValues.noteHeight = 0.7/8;
+		
+		
+		gValues.bigNumFontSize = 0.08;
+		gValues.noteFontSize = 1/40;
 		gValues.noteOnColor = [0.94 0.94 1];
 		gValues.noteOffColor = [0.94 0.94 0.94];
 		gValues.hintBgColor = [1 .25 .25];
-		gValues.baseFigDim = [560 420]; % base [width,height] of a new figure, used for resizing
-% 		gValues.opHeight = 0.15;
-% 		gValues.startN = 5;
+		gValues.baseFigDim = [560 420]; % base [width,height] of a new figure, used for scaling and resizing
+		gValues.gridLineWidth = 1.0;
+		gValues.gridLineWidthMinor = 0.675;
+		if f.Position(3)/f.Position(4) > gValues.baseFigDim(1)/gValues.baseFigDim(2) % limited by height of figure
+			gValues.scale = f.Position(4)/gValues.baseFigDim(2);
+		else
+			gValues.scale = f.Position(3)/gValues.baseFigDim(1); % limited by width of figure
+		end
 		
+		
+				
 		
 		ng = uicontrol(...
 			'Parent',f,...
