@@ -8,6 +8,8 @@ decide on updateNotes()
 - possibly trickier with repetitions, but unique() should help
 - would it check agains doms? or just side/top/bot hints?
 
+get rid of topNums and botNums in hintNums()
+
 the value of 'num' in numFill() for 'x' and 'all' (' ' and nan) would make more sense
 reversed as nan currently means empty
 
@@ -397,24 +399,24 @@ function [] = Domino_Theory()
 	% hint and number red. Completed hints will turn grey.
 	% r0, c0 is the row/col of that last place with a changed big number
 	function [] = errorCheck(r0, c0)
+% 		topNums = numGrid(1:2:7,:) % each col gives the upper hints, each row gives side hints
+% 		botNums = numGrid(2:2:8,:) % each col gives the lower hints, each row gives side hints
+		
 		mistakes = zeros(8,7);
 		for r = 1:8
 			% side mistakes
 			userNums = userGrid(r,:);
-			hints = zeros(1,7);
-			for i = 1:7
-				hints(i) = sideHints(r,i).UserData.num;
-				sideHints(r,i).BackgroundColor = 'none'; % remove red background from side hints, will get readded later if needed
-			end
+			hints = sort(numGrid(r,:));
 			hintsO = hints;
 			for i = 1:7
+				sideHints(r,i).BackgroundColor = 'none'; % remove red background from side hints, will get readded later if needed
 				if ~isnan(userNums(i))
 					hints(find(userNums(i)==hints,1)) = -1;
 				end
 			end
 			if r == r0 % grey out only in the current row
 				for i = 1:7
-					sideHints(r0,i).Color = [1 1 1]*0.675*(hints(i) < 0); % grey out fulfilled side hints. also turns unfulfilled hints black
+					sideHints(r0,i).Color = [1 1 1]*gValues.hintGrey*(hints(i) < 0); % grey out fulfilled side hints. also turns unfulfilled hints black
 				end
 			end
 			if sum(hints<0) ~= sum(~isnan(userNums)) % entered nums don't match hints
@@ -439,20 +441,17 @@ function [] = Domino_Theory()
 		for c = 1:7
 			% top mistakes
 			userNums = userGrid(1:2:7,c)';
-			hints = zeros(1,4);
-			for i = 1:4
-				hints(i) = topHints(c,i).UserData.num;
-				topHints(c,i).BackgroundColor = 'none'; % remove red background from top hints, will get readded later if needed
-			end
+			hints = sort(numGrid(1:2:7,c));
 			hintsO = hints;
 			for i = 1:4
+				topHints(c,i).BackgroundColor = 'none'; % remove red background from top hints, will get readded later if needed
 				if ~isnan(userNums(i))
 					hints(find(userNums(i)==hints,1)) = -1;
 				end
 			end
 			if c == c0
 				for i = 1:4
-					topHints(c,i).Color = [1 1 1]*0.675*(hints(i) < 0);
+					topHints(c,i).Color = [1 1 1]*gValues.hintGrey*(hints(i) < 0);
 				end
 			end
 			if sum(hints<0) ~= sum(~isnan(userNums)) % entered nums don't match hints
@@ -476,20 +475,17 @@ function [] = Domino_Theory()
 
 			% bot mistakes
 			userNums = userGrid(2:2:8,c)';
-			hints = zeros(1,4);
-			for i = 1:4
-				hints(i) = botHints(c,i).UserData.num;
-				botHints(c,i).BackgroundColor = 'none'; % remove red background from bot hints, will get readded later if needed
-			end
+			hints = sort(numGrid(2:2:8,c));
 			hintsO = hints;
 			for i = 1:4
+				botHints(c,i).BackgroundColor = 'none'; % remove red background from bot hints, will get readded later if needed
 				if ~isnan(userNums(i))
 					hints(find(userNums(i)==hints,1)) = -1;
 				end
 			end
 			if c == c0
 				for i = 1:4
-					botHints(c,i).Color = [1 1 1]*0.675*(hints(i) < 0); % grey out bot hints in current column
+					botHints(c,i).Color = [1 1 1]*gValues.hintGrey*(hints(i) < 0); % grey out bot hints in current column
 				end
 			end
 			if sum(hints<0) ~= sum(~isnan(userNums)) % entered nums don't match hints
@@ -540,7 +536,7 @@ function [] = Domino_Theory()
 				end
 				domHintsP(i).FaceColor = [1 0 0]; % error, mark dom hint red
 			elseif doms(i) == 1
-				domHintsP(i).FaceColor = [1 1 1]*0.5; % fulfilled exactly once, mark grey
+				domHintsP(i).FaceColor = [1 1 1]*gValues.hintGrey; % fulfilled exactly once, mark grey
 			else
 				domHintsP(i).FaceColor = [1 1 1]; % unfulfilled, mark white
 			end
@@ -591,13 +587,62 @@ function [] = Domino_Theory()
 		-remove anything that makes a completed domino
 		
 		%}
-% 		for i = ra
-% 			hSide = sideHints;
-% 			for j = ca
-% 				
-% 			end
-% 		end
+		'==========================boop==========================='
+		for i = ra
+			hSide = sort(numGrid(i,:));
+			t = {sideHints(i,:).Color}; % all the ts are because getting structs out of an array is annoying
+			t = [t{:}];
+			t = t(2:3:end); % gets sideHints(i,:).Color(2) in one array
+			hSideGrey = (t == gValues.hintGrey); % compares it to the greyed out color
+
+			for j = ca
+				hTB = sort(numGrid((2 - mod(i,2)):2:8,j))'; % gives top or bot hints based on row i
+				if mod(i,2)
+					t = {topHints(j,:).Color};
+				else
+					t = {botHints(j,:).Color};
+				end
+				t = [t{:}];
+				t = t(2:3:end); % gets sideHints(i,:).Color(2) in one array
+				hTBGrey = (t == gValues.hintGrey); % compares it to the greyed out color
+				if isnan(userGrid(i,j)) && any([notesGrid(i,j).String{:}] ~= ' ') % square isn't filled and has some notes
+					for x = str2num([notesGrid(i,j).String{:}]) %#ok<ST2NM> % for each note that's on, str2double() will not work here
+						% check side hints
+						hintOff = hSideGrey(hSide==x);
+						if all(hSide~=x) || (~isempty(hintOff) && all(hintOff)) % x is not in this row at all OR (all instances of x are greyed out AND there is at least one instance)
+% 							sprintf('%d off, side',x)
+							notesGrid(i,j).String{but(x+3).UserData.cellRow}(but(x+3).UserData.strInds) = ' ';
+						end
+						
+						% check top/bot hints
+% 						x
+% 						hTB == x
+						hintOff = hTBGrey(hTB==x);
+						if all(hTB~=x) || (~isempty(hintOff) && all(hintOff)) % x is not in this half of the column at all OR (all instances of x are greyed out AND there is at least one instance)
+% 							sprintf('%d off, tb',x)
+							notesGrid(i,j).String{but(x+3).UserData.cellRow}(but(x+3).UserData.strInds) = ' ';
+						end
+					end
+				end
+			end
+		end
 		
+		%{
+		t = {sideHints(i,:).Color}
+		t2 = [t{:}]
+		t3 = t2(2:3:end)
+		t4 = t3 == gValues.hintGrey
+		
+		but(x+3).UserData.cellRow
+		but(i+3).UserData.strInds
+		
+		if notesGrid(r,c).String{cellRow}(strInds(1)) == ' '
+			s = newNumStr;
+		else
+			s = ' ';
+		end
+		notesGrid(r,c).String{cellRow}(strInds) = s;
+		%}
 % 		for i = ra
 % 			r = unique(userGrid(i,:)); % nums in row
 % 			r(isnan(r)) = [];
@@ -612,6 +657,17 @@ function [] = Domino_Theory()
 % 				end
 % 			end
 % 		end
+	end
+	
+	function [] = allNotesFcn(~,~)
+		for i = 1:8
+			for j = 1:7
+				if isnan(userGrid(i,j)) && isempty(regexp([notesGrid(i,j).String{:}],'\d','once')) %~any(arrayfun(fcn,notesGrid(i,j)))
+					notesGrid(i,j).String = notesGrid(1,1).UserData.all;
+					updateNotes(0,0,i,j);
+				end
+			end
+		end
 	end
 	
 	function [] = highlight(on,rc)
@@ -668,6 +724,7 @@ function [] = Domino_Theory()
 		gValues.baseFigDim = [560 420]; % base [width,height] of a new figure, used for scaling and resizing
 		gValues.gridLineWidth = 1.0;
 		gValues.gridLineWidthMinor = 0.675;
+		gValues.hintGrey = 0.675;
 		if f.Position(3)/f.Position(4) > gValues.baseFigDim(1)/gValues.baseFigDim(2) % limited by height of figure
 			gValues.scale = f.Position(4)/gValues.baseFigDim(2);
 		else
@@ -683,10 +740,32 @@ function [] = Domino_Theory()
 			'Style','pushbutton',...
 			'String','New',...
 			'Callback',@newGame,...
-			'Position',[0.05 0.8 0.1 0.1],...
+			'Position',[0.05 0.8 0.1 0.075],...
 			'TooltipString','New Puzzle',...
 			'FontUnits','normalized',...
-			'FontSize',0.25); %#ok<NASGU>
+			'FontSize',0.5); %#ok<NASGU>
+		
+		noteClearer = uicontrol(...
+			'Parent',f,...
+			'Units','normalized',...
+			'Style','pushbutton',...
+			'String','Update Notes',...
+			'Callback',@updateNotes,...
+			'Position',[0.05 0.7 0.1 0.075],...
+			'TooltipString','Removes blocked notes',...
+			'FontUnits','normalized',...
+			'FontSize',0.25);
+		
+		allNotes = uicontrol(...
+			'Parent',f,...
+			'Units','normalized',...
+			'Style','pushbutton',...
+			'String','Add All Notes',...
+			'Callback',@allNotesFcn,...
+			'Position',[0.05 0.6 0.1 0.075],...
+			'TooltipString','Adds notes to all blank squares',...
+			'FontUnits','normalized',...
+			'FontSize',0.25);
 		
 % 		clearer = uicontrol(...
 % 			'Parent',f,...
