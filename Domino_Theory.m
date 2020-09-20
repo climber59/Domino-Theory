@@ -545,47 +545,18 @@ function [] = Domino_Theory()
 				domHintsP(i).FaceColor = [1 1 1]; % unfulfilled, mark white
 			end
 		end
-
-
-
-% 		mistakes
+		
+		% change every big number with a mistake red, all other black
 		for i = 1:8
 			for j = 1:7
-				textGrid(i,j).Color(1) = mistakes(i,j);
+				textGrid(i,j).Color(1) = mistakes(i,j); 
 			end
 		end
-		%{
-		side hints should play out very similarly to top/bot hints,
-		just transposed
-
-		i could simplify my life by only turning the hints red, not the
-		big numbers. this way, none of them interfere with each other.
-
-		if i want to change the color of the big numbers, i think i'm
-		going to end up with an 8x7 array keeping track of which spaces
-		have an error and then do all color changes at the end.
-		- tried the big array to keep track, but i think there's just
-		so many ways for errors to occur. to know when to remove an
-		error warning, i'll need to check every row and column every
-		time a big number changes. I can't safely check just the
-		current r,c
-
-		im also running into the issue that I think the domino hints
-		may be too linked between error checking and hint updating to
-		be done separately. frankly most of them are linked and there's
-		more repeated code than i'd prefer
-		-- there's so much repeated code that my next plan is to combine
-		hintUpdate() and errorCheck() if possible. at least the dom part
-
-
-
-
-
-		%}
 	end
 	
+	% returns 'true' if the puzzle is solved
 	function [won] = winCheck()		
-		won = sum(sum(~isnan(userGrid))) == 56; %everything filled in
+		won = sum(sum(~isnan(userGrid))) == 56; % everything filled in
 		if ~won
 			return
 		end
@@ -604,11 +575,29 @@ function [] = Domino_Theory()
 	end
 	
 	function [] = updateNotes(~,~,ra,ca)
-		enterTool.Visible = 'off';
+% 		enterTool.Visible = 'off';
 		if nargin < 4 %if no specified ra/rc, check all notes in all squares
 			ra = 1:8;
 			ca = 1:7;
 		end
+		
+		%{
+		check that the square does not have a big number
+		remove the note for any number not in the side hints
+		remove the note for any number not in the top/bot hints
+		
+		check if the other part of the domino is filled
+		-remove anything that makes an upside down domino
+		-remove anything that makes a completed domino
+		
+		%}
+% 		for i = ra
+% 			hSide = sideHints;
+% 			for j = ca
+% 				
+% 			end
+% 		end
+		
 % 		for i = ra
 % 			r = unique(userGrid(i,:)); % nums in row
 % 			r(isnan(r)) = [];
