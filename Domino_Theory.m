@@ -14,8 +14,6 @@ click on a domino hint to mark it?
 but not which is which yet.
 - Marking may help figure out where 1/4 is
 
-get rid of topNums and botNums in hintNums()
-
 the value of 'num' in numFill() for 'x' and 'all' (' ' and nan) would make more sense
 reversed as nan currently means empty
 
@@ -65,7 +63,7 @@ function [] = Domino_Theory()
 	gridlines = [];
 	checkmark = [];
 	
-	debugging = false; 
+	debugging = false; % if true, the solution will display in the command window
 	
 	figureSetup();
 	newGame();
@@ -138,33 +136,25 @@ function [] = Domino_Theory()
 		end
 	end
 	
-	function [] = hintNums()
-		fs = 0.035;
-		topNums = numGrid(1:2:7,:); % each col gives the upper hints, each row gives side hints
-		botNums = numGrid(2:2:8,:); % each col gives the lower hints, each row gives side hints
-		
-		
+	% creates all graphics objects for the hints. top hints, bot hints,
+	% side hints, and the domino hints
+	function [] = hintNums()		
 		% top and bot hints
 		for i = 1:7
-			t = sort(topNums(:,i))';
-			b = sort(botNums(:,i))';
+			t = sort(numGrid(1:2:7,i))';
+			b = sort(numGrid(2:2:8,i))';
 			for j = 1:4
-				topHints(i,j) = text(i - 0.33*(mod(j,2) - 2), 0.4 + 0.5*floor((j-1)/2),num2str(t(j)),'FontUnits','normalized','FontSize',fs,'FontName','fixedwidth','HorizontalAlignment','center','VerticalAlignment','bottom');
-				topHints(i,j).UserData.num = t(j);
-				botHints(i,j) = text(i - 0.33*(mod(j,2) - 2), 9.4 + 0.5*floor((j-1)/2),num2str(b(j)),'FontUnits','normalized','FontSize',fs,'FontName','fixedwidth','HorizontalAlignment','center','VerticalAlignment','bottom');
-				botHints(i,j).UserData.num = b(j);
+				topHints(i,j) = text(i - 0.33*(mod(j,2) - 2), 0.4 + 0.5*floor((j-1)/2),num2str(t(j)),'FontUnits','normalized','FontSize',gValues.hintFontSize,'FontName','fixedwidth','HorizontalAlignment','center','VerticalAlignment','bottom');
+				botHints(i,j) = text(i - 0.33*(mod(j,2) - 2), 9.4 + 0.5*floor((j-1)/2),num2str(b(j)),'FontUnits','normalized','FontSize',gValues.hintFontSize,'FontName','fixedwidth','HorizontalAlignment','center','VerticalAlignment','bottom');
 			end
 		end
 		
-		%side hints
-		for i = 1:4
-			t = sort(topNums(i,:));
-			b = sort(botNums(i,:));
+		% side hints
+		for i = 1:8
+			y = i + 0.5 + 0.1*(2*mod(i,2) - 1); % y position of hints with slight shift based on being upper/lower half of the domino
+			t = sort(numGrid(i,:));
 			for j = 1:7
-				sideHints(2*i-1,j) = text(j*2/7 - 9/7, 2*i - 0.40, num2str(t(j)),'FontUnits','normalized','FontSize',fs,'FontName','fixedwidth','HorizontalAlignment','center','VerticalAlignment','middle');
-				sideHints(2*i-1,j).UserData.num = t(j);
-				sideHints(2*i,j) = text(j*2/7 - 9/7, 2*i + 0.40, num2str(b(j)),'FontUnits','normalized','FontSize',fs,'FontName','fixedwidth','HorizontalAlignment','center','VerticalAlignment','middle');
-				sideHints(2*i,j).UserData.num = b(j);
+				sideHints(i,j) = text(j*2/7 - 9/7, y, num2str(t(j)),'FontUnits','normalized','FontSize',gValues.hintFontSize,'FontName','fixedwidth','HorizontalAlignment','center','VerticalAlignment','middle');
 			end
 		end
 		
@@ -692,6 +682,7 @@ function [] = Domino_Theory()
 		gValues.gridLineWidth = 1.0;
 		gValues.gridLineWidthMinor = 0.675;
 		gValues.hintGrey = 0.675;
+		gValues.hintFontSize = 0.035;
 		if f.Position(3)/f.Position(4) > gValues.baseFigDim(1)/gValues.baseFigDim(2) % limited by height of figure
 			gValues.scale = f.Position(4)/gValues.baseFigDim(2);
 		else
