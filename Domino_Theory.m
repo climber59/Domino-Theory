@@ -74,7 +74,6 @@ function [] = Domino_Theory()
 	end
 	
 	function [] = click(~,~)
-% 		[f.CurrentPoint]
 		if finished
 			return
 		end
@@ -86,13 +85,10 @@ function [] = Domino_Theory()
 		end
 		
 		% find x,y location to put the enter tool
-		% positioned at the right edge and with the height centered
-		x = f.CurrentPoint(1);
-		y = f.CurrentPoint(2);
-		ax.Units = 'normalized';		
-		
-		enterTool.Position(1) = x;
-		enterTool.Position(2) = max(0, min([y, f.Position(4) - enterTool.Position(4)])); % keeps the tool from displaying off the screen vertically
+		% bottom left corner goes to the cursor, will shift to prevent
+		% going offscreen
+		enterTool.Position(1) = max([0, min([f.CurrentPoint(1), f.Position(3) - enterTool.Position(3)])]);
+		enterTool.Position(2) = max([0, min([f.CurrentPoint(2), f.Position(4) - enterTool.Position(4)])]);
 		
 		enterTool.UserData = m;
 		if strcmp(f.SelectionType,'alt')
@@ -635,8 +631,9 @@ function [] = Domino_Theory()
 	end
 	
 	% changes the size of the enter tool when you use the mouse scroll wheel
+	% limited to between 1/15 and 1/2 the figure height
 	function [] = scrollWheel(~,evt)
-		enterTool.Position([3,4]) = enterTool.Position([3,4])*1.1^-evt.VerticalScrollCount;		
+		enterTool.Position([3,4]) = max([f.Position(4)/15, min([f.Position(4)/2, enterTool.Position([3,4])*1.1^-evt.VerticalScrollCount])]);
 	end
 	
 	function [] = figureSetup()
