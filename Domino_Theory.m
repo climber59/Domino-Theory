@@ -359,11 +359,10 @@ function [] = Domino_Theory()
 		else
 			% Enter 'big' number
 			textGrid(r,c).String = newNumStr;
-% 			textGrid(r,c).FontSize = textGrid(r,c).FontSize/max(textGrid(r,c).Extent([3 4])); % scale text to fit in the box
 			enterTool.Visible = 'off';
 
-			if ~isnan(num)
-				notesGrid(r,c).String = notesGrid(1,1).UserData.none;
+			if ~isnan(num) % didn't press 'X'
+				notesGrid(r,c).String = notesGrid(1,1).UserData.none; % turn off any notes
 			end
 			userGrid(r,c) = num;
 			errorCheck(r,c);
