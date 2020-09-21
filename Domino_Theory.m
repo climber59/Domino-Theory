@@ -14,8 +14,7 @@ click on a domino hint to mark it?
 but not which is which yet.
 - Marking may help figure out where 1/4 is
 
-the value of 'num' in numFill() for 'x' and 'all' (' ' and nan) would make more sense
-reversed as nan currently means empty
+buildEnterTool() shouldn't need to be in newGame.
 
 use the open space outside dom hints for other ui elements, like ng,
 starting hints, etc
@@ -347,13 +346,13 @@ function [] = Domino_Theory()
 					but(num + 3).BackgroundColor = gValues.noteOffColor;
 				end
 				notesGrid(r,c).String{cellRow}(strInds) = s;
-			elseif isnan(num) % enter all possible notes (based on latin square)
-				notesGrid(r,c).String = notesGrid(1,1).UserData.all;
-				updateNotes(0,0,r,c); % remove blocked numbers
+			elseif isnan(num) % X button pressed, clear the notes
+				notesGrid(r,c).String = notesGrid(1,1).UserData.none;
 				enterTool.Visible = 'off';
 				highlight(false);
-			else % X button pressed, clear the notes
-				notesGrid(r,c).String = notesGrid(1,1).UserData.none;
+			else % enter all possible notes (based on the hints)
+				notesGrid(r,c).String = notesGrid(1,1).UserData.all;
+				updateNotes(0,0,r,c); % remove blocked numbers
 				enterTool.Visible = 'off';
 				highlight(false);
 			end
@@ -363,9 +362,7 @@ function [] = Domino_Theory()
 % 			textGrid(r,c).FontSize = textGrid(r,c).FontSize/max(textGrid(r,c).Extent([3 4])); % scale text to fit in the box
 			enterTool.Visible = 'off';
 
-			if isempty(num) % X button pressed
-				num = nan; % should only check if turning off red text			
-			else
+			if ~isnan(num)
 				notesGrid(r,c).String = notesGrid(1,1).UserData.none;
 			end
 			userGrid(r,c) = num;
@@ -752,7 +749,7 @@ function [] = Domino_Theory()
 			'Position',[0 2/3, 1/3 1/3],...
 			'String','X',...
 			'FontSize',15,...
-			'Callback',{@numFill, ' ', []});	
+			'Callback',{@numFill, ' ', nan});	
 		but(2) = uicontrol(...
 			'Parent',enterTool,...
 			'Style','pushbutton',...
@@ -760,7 +757,7 @@ function [] = Domino_Theory()
 			'Position',[1/3 2/3, 1/3 1/3],...
 			'String','all',...
 			'FontSize',15,...
-			'Callback',{@numFill, 'NaN', nan},...
+			'Callback',{@numFill, ' ', []},...
 			'Visible','off');	
 	end
 	
