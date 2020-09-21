@@ -14,14 +14,10 @@ click on a domino hint to mark it?
 but not which is which yet.
 - Marking may help figure out where 1/4 is
 
-buildEnterTool() shouldn't need to be in newGame.
-
 use the open space outside dom hints for other ui elements, like ng,
 starting hints, etc
 - add starting difficulty options in the first place
 - reset button?
-
-try to fix the enter tool movement code
 
 break up the grid so it looks more like dominos?
 - like the dom hints
@@ -34,9 +30,15 @@ upside down domino indicator is ugly and hard to read
 
 top/bot hint indicators don't touch and I wish they did.
 
+========= Things to rework based on constant grid size ====================
 'cla' can probably be removed from newGame() as the board never changes
 size
 - ui creation code will need to be altered though.
+
+buildEnterTool() shouldn't need to be in newGame, but it relies on info
+generated in blankNums().
+- everything blankNums() is identical game to game, so it could be called
+elsewhere as well
 
 
 %}
@@ -113,7 +115,6 @@ function [] = Domino_Theory()
 		cla
 		
 		enterTool.Visible = 'off';
-		enterTool.UserData = [1 1];
 		
 		finished = false;
 		noteMode = false;
@@ -757,7 +758,6 @@ function [] = Domino_Theory()
 	end
 	
 end
-
 
 
 
