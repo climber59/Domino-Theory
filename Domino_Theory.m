@@ -651,7 +651,6 @@ function [] = Domino_Theory()
 		
 		
 		ax = axes('Parent',f);
-% 		ax.Position = [0.3 0 0.7 1];
 		ax.Position = [0 0 1 1];
 		ax.YDir = 'reverse';
 		ax.YTick = [];
@@ -762,39 +761,6 @@ end
 
 
 
-
-
-		% The code in KenKen worked because the axis object was square, it
-		% becomes surprisingly complicated with the rectangualr axis that
-		% also has text above and to the side of the "board." Using the
-		% point clicked in the figure (f.CurrentPoint) is good enough for
-		% now.
-		
-% 		% enter tool placement code for when it appears
-% 		ax.Units = 'pixels';
-% 		'==============================================================='
-% 		ax.CurrentPoint([3, 1])
-% 		ax.Position
-% 		ax.XLim
-% 		ax.YLim
-% 		diff(ax.XLim)
-% 		(diff(ax.XLim)-7)/diff(ax.XLim)
-% 		z = (7)/diff(ax.XLim)
-% 		z*ax.Position(3)
-% 		'======================'
-% 		diff(ax.YLim)
-% 		(diff(ax.YLim)-8)/diff(ax.YLim)
-% 		z2 = (8)/diff(ax.YLim)
-% 		z2*ax.Position(4)
-% 		
-% 		
-% 		if ax.Position(4) > z*ax.Position(3) % axes limited by width
-% 			x = (m(2)-1)/7*z*ax.Position(3) + ax.Position(1) + (1-z)*ax.Position(3) - numPanel.Position(3)
-% 			y = (7-m(1)+0.5)*z*ax.Position(3)/7 + numPanel.Position(4)/3
-% 		else % axes limited by height
-% 			x = m(2)/8*z2*ax.Position(4) + ax.Position(1) + (1-z)*ax.Position(3)
-% 			y = (8-m(1)+0.5)*(z2*ax.Position(4)-ax.Position(2))/7 %+ ax.Position(2) - numPanel.Position(4)/2;
-% 		end
 
 
 
