@@ -4,9 +4,15 @@ Based on Domino Theory by Margery Albis in Games: World of Puzzles, February 202
 
 %}
 %{
-decide on updateNotes()
-- possibly trickier with repetitions, but unique() should help
-- would it check agains doms? or just side/top/bot hints?
+decide on how to limitupdateNotes()
+- require clicking a checkbox warning how powerful it is?
+- only check certain hints, not all?
+- only enable it towards the end? would speed up the last ~1/8 of the puzzle
+
+click on a domino hint to mark it?
+- ex, you have two bottom 4s where you know one is 2/4 and the other 3/4,
+but not which is which yet.
+- Marking may help figure out where 1/4 is
 
 get rid of topNums and botNums in hintNums()
 
@@ -571,7 +577,6 @@ function [] = Domino_Theory()
 	end
 	
 	function [] = updateNotes(~,~,ra,ca)
-% 		enterTool.Visible = 'off';
 		if nargin < 4 %if no specified ra/rc, check all notes in all squares
 			ra = 1:8;
 			ca = 1:7;
@@ -587,7 +592,6 @@ function [] = Domino_Theory()
 		-remove anything that makes a completed domino
 		
 		%}
-		'==========================boop==========================='
 		for i = ra
 			hSide = sort(numGrid(i,:));
 			t = {sideHints(i,:).Color}; % all the ts are because getting structs out of an array is annoying
@@ -607,56 +611,19 @@ function [] = Domino_Theory()
 				hTBGrey = (t == gValues.hintGrey); % compares it to the greyed out color
 				if isnan(userGrid(i,j)) && any([notesGrid(i,j).String{:}] ~= ' ') % square isn't filled and has some notes
 					for x = str2num([notesGrid(i,j).String{:}]) %#ok<ST2NM> % for each note that's on, str2double() will not work here
-						% check side hints
-						hintOff = hSideGrey(hSide==x);
-						if all(hSide~=x) || (~isempty(hintOff) && all(hintOff)) % x is not in this row at all OR (all instances of x are greyed out AND there is at least one instance)
-% 							sprintf('%d off, side',x)
-							notesGrid(i,j).String{but(x+3).UserData.cellRow}(but(x+3).UserData.strInds) = ' ';
-						end
+						hintOffSide = hSideGrey(hSide==x);
+						hintOffTB = hTBGrey(hTB==x);
 						
-						% check top/bot hints
-% 						x
-% 						hTB == x
-						hintOff = hTBGrey(hTB==x);
-						if all(hTB~=x) || (~isempty(hintOff) && all(hintOff)) % x is not in this half of the column at all OR (all instances of x are greyed out AND there is at least one instance)
-% 							sprintf('%d off, tb',x)
+						if  (all(hSide~=x) || (~isempty(hintOffSide) && all(hintOffSide)))...  % x is not in this row at all OR (all instances of x are greyed out AND there is at least one instance)
+							|| (all(hTB~=x) || (~isempty(hintOffTB) && all(hintOffTB)))...  % x is not in this half of the column at all OR (all instances of x are greyed out AND there is at least one instance)
+							|| (mod(i,2) && (~isnan(userGrid(i+1,j)) && (x > userGrid(i+1,j) || domHintsP(patchInd(x,userGrid(i+1,j))).FaceColor(2) == gValues.hintGrey)))...  % is upper half, bottom half filled, rightside up domino, domino already completed elsewhere
+							|| (~mod(i,2) && (~isnan(userGrid(i-1,j)) && (x < userGrid(i-1,j) || domHintsP(patchInd(x,userGrid(i-1,j))).FaceColor(2) == gValues.hintGrey)))  % is lower half, bottom half filled, rightside up domino, domino already completed elsewhere
 							notesGrid(i,j).String{but(x+3).UserData.cellRow}(but(x+3).UserData.strInds) = ' ';
-						end
+						end						
 					end
 				end
 			end
 		end
-		
-		%{
-		t = {sideHints(i,:).Color}
-		t2 = [t{:}]
-		t3 = t2(2:3:end)
-		t4 = t3 == gValues.hintGrey
-		
-		but(x+3).UserData.cellRow
-		but(i+3).UserData.strInds
-		
-		if notesGrid(r,c).String{cellRow}(strInds(1)) == ' '
-			s = newNumStr;
-		else
-			s = ' ';
-		end
-		notesGrid(r,c).String{cellRow}(strInds) = s;
-		%}
-% 		for i = ra
-% 			r = unique(userGrid(i,:)); % nums in row
-% 			r(isnan(r)) = [];
-% 			for j = ca
-% 				if isnan(userGrid(i,j)) % only update squares not filled in
-% 					k = unique([r, userGrid(:,j)']); % all nums in row and column
-% 					k(isnan(k)) = [];
-% 					for k = k
-% 						butInd = 2 + find(theNums == k,1);
-% 						notesGrid(i,j).String{but(butInd).UserData.cellRow}(but(butInd).UserData.strInds) = ' ';
-% 					end
-% 				end
-% 			end
-% 		end
 	end
 	
 	function [] = allNotesFcn(~,~)
@@ -754,7 +721,7 @@ function [] = Domino_Theory()
 			'Position',[0.05 0.7 0.1 0.075],...
 			'TooltipString','Removes blocked notes',...
 			'FontUnits','normalized',...
-			'FontSize',0.25);
+			'FontSize',0.25); %#ok<NASGU>
 		
 		allNotes = uicontrol(...
 			'Parent',f,...
@@ -765,7 +732,7 @@ function [] = Domino_Theory()
 			'Position',[0.05 0.6 0.1 0.075],...
 			'TooltipString','Adds notes to all blank squares',...
 			'FontUnits','normalized',...
-			'FontSize',0.25);
+			'FontSize',0.25); %#ok<NASGU>
 		
 % 		clearer = uicontrol(...
 % 			'Parent',f,...
